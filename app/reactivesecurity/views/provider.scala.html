@@ -1,0 +1,27 @@
+@(providerId: String, loginForm: Option[Form[(String,String)]] = None)
+
+<form action=@reactivesecurity.defaults.routes.DefaultAuthenticator.authenticateByPost("userpass")
+    class="form-horizontal" autocomplete="off" method="POST">
+
+<fieldset>
+    @helper.inputText(loginForm.get("username"),
+        '_label -> Messages("reactivesecurity.signup.email1"),
+        'class -> "input-xlarge"
+    )
+
+    @helper.inputPassword(loginForm.get("password"),
+        '_label -> Messages("reactivesecurity.signup.password1"),
+        'class -> "input-xlarge"
+    )
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">@Messages("reactivesecurity.login.title")</button>
+    </div>
+    <div class="clearfix">
+        <a href="/reactivesecurity.core.providers.utils.RoutesHelper.startResetPassword()"><p>@Messages("reactivesecurity.login.forgotPassword") </a></p>
+    </div>
+    <div class="clearfix">
+        <p>@Messages("reactivesecurity.login.signUp") <a href="/reactivesecurity.core.providers.utils.RoutesHelper.startSignUp()">@Messages("reactivesecurity.login.here")</a></p>
+    </div>
+</fieldset>
+</form>

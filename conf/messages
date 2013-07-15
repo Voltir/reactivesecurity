@@ -1,0 +1,13 @@
+#TODO move to reactivesecurity/conf
+
+# Login page
+reactivesecurity.login.title=Login
+reactivesecurity.login.instructions=Use your existing account on one of the following networks to log in.
+reactivesecurity.login.accessDenied=You denied access to your account. Please grant it to log in.
+reactivesecurity.login.errorLoggingIn=An error occurred while logging you in. Please try again.
+reactivesecurity.login.useEmailAndPassword=Or login using a username and password.
+reactivesecurity.login.useEmailAndPasswordOnly=Login using a username and password.
+reactivesecurity.login.signUp=If you don''t have an account with us yet you can sign up
+reactivesecurity.login.here=here
+reactivesecurity.login.invalidCredentials=The credentials you entered are not valid
+reactivesecurity.login.forgotPassword=Did you forget your password?
