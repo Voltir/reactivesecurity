@@ -6,25 +6,32 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object User {
 
-  trait UserProvider[+USR] {
-    def user: USR
+  trait UserProvider[+USER] {
+    def user: USER
   }
-
 
   trait UserWithIdentity[ID] {
     def id: ID
     def rawId: String
   }
 
-  trait IdService[ID] {
-    def idFromString(id: String): ID
+  trait IdFromString[ID] {
+    def apply(id: String): ID
   }
 
-  trait UserService[ID,FAIL,USR] {
-    def findById(id: ID)(implicit ec: ExecutionContext): Future[Validation[FAIL, USR]]
+  trait IdStringFromInput[IN] {
+    def apply(in: IN): Option[String]
   }
 
-  trait CredentialValidator[USR, CRED, FAIL] {
-    def validate(user: USR, credential: CRED): Validation[FAIL,USR]
+  trait StringFromId[ID] {
+    def apply(id: ID): String
+  }
+
+  trait UserService[ID,USER <: UserWithIdentity[ID],FAILURE] {
+    def find(id: ID)(implicit ec: ExecutionContext): Future[Validation[FAILURE, USER]]
+  }
+
+  trait CredentialValidator[ID, USER <: UserWithIdentity[ID], CRED, FAIL] {
+    def validate(user: USER, credential: CRED): Validation[FAIL,USER]
   }
 }

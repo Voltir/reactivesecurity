@@ -3,25 +3,24 @@ package reactivesecurity.core
 import scalaz.Validation
 import scala.concurrent.{ExecutionContext, Future, future}
 
-import reactivesecurity.core.User.UserProvider
+import reactivesecurity.core.User.{UserWithIdentity, UserProvider}
 
 object Authentication {
 
   trait AuthenticationProcess[IN,OUT,USR] {
     def authentication(action: (IN,USR) => OUT): IN => OUT
-    def asyncAuthentication(action: (IN,USR) => OUT)(implicit ec: ExecutionContext): IN => Future[OUT]
   }
 
   trait AsyncAuthenticationProcess[IN,OUT,USR] {
-    def authentication(action: (IN,USR))(implicit ec: ExecutionContext): IN => Future[OUT]
+    def authentication(action: (IN,USR) => OUT)(implicit ec: ExecutionContext): IN => Future[OUT]
   }
 
-  trait InputValidator[-IN,+USR,+FAIL] {
-    def validateInput(in: IN): Validation[FAIL,USR]
+  trait InputValidator[-IN,+USER,+FAILURE] {
+    def validateInput(in: IN): Validation[FAILURE,USER]
   }
 
-  trait AsyncInputValidator[-IN,+USR,+FAIL] {
-    def validateInput(in: IN): Future[Validation[FAIL,USR]]
+  trait AsyncInputValidator[-IN,ID,USER <: UserWithIdentity[ID],+FAILURE] {
+    def validateInput(in: IN)(implicit ec: ExecutionContext): Future[Validation[FAILURE,USER]]
   }
 
   trait AuthenticationFailureHandler[IN,FAIL,OUT] {
@@ -47,10 +46,15 @@ object Authentication {
         )
       }
     }
+  }
 
-    override def asyncAuthentication(action: (IN,USR) => OUT)(implicit ec: ExecutionContext): IN => Future[OUT] = {
+  trait AsyncAuthentication[IN,OUT,ID,USER <: UserWithIdentity[ID],FAILURE] extends AsyncAuthenticationProcess[IN,OUT,USER] {
+    val inputValidator: AsyncInputValidator[IN,ID,USER,FAILURE]
+    val authFailureHandler: AuthenticationFailureHandler[IN,FAILURE,OUT]
+
+    override def authentication(action: (IN,USER) => OUT)(implicit ec: ExecutionContext): IN => Future[OUT] = {
       in: IN => {
-        future { inputValidator.validateInput(in) }.map { result =>
+        inputValidator.validateInput(in).map { result =>
           result.fold(
             fail = { f => authFailureHandler.onAuthenticationFailure(in,f)  },
             succ = { user => action(in,user) }
@@ -66,9 +70,5 @@ object Authentication {
 
   trait AuthorizationService[-USER,-RESOURCE,+FAILURE] {
     def authorize(user: USER, resource: RESOURCE): Future[Boolean]
-  }
-
-  trait LoginHandler[-IN,OUT] {
-    def getLoginPage(in: IN): OUT
   }
 }

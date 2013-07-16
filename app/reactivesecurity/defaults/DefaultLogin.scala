@@ -1,6 +1,6 @@
 package reactivesecurity.defaults
 
-import reactivesecurity.core.Authentication.LoginHandler
+import reactivesecurity.core.LoginHandler
 import play.api.mvc._
 import play.api.templates.Html
 import reactivesecurity.controllers.Login

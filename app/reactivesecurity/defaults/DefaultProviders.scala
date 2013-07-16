@@ -1,23 +1,22 @@
 package reactivesecurity.defaults
 
-import reactivesecurity.controllers.Providers
-import reactivesecurity.core.User.{IdService, CredentialValidator, UserService}
-import reactivesecurity.core.providers.{IdPass, UserPasswordProvider}
-import reactivesecurity.core.std.AuthenticationFailure
 import scala.concurrent.{ExecutionContext, future}
 import scalaz.{Validation, Success}
 
-case class TodoUser(id: String)
+import reactivesecurity.controllers.Providers
+import reactivesecurity.core.User.{ UserWithIdentity, CredentialValidator, UserService}
+import reactivesecurity.core.providers.{IdPass, UserPasswordProvider}
+import reactivesecurity.core.std.{StringAsId, AuthenticationFailure}
 
-object TodoIdService extends IdService[String] {
-  override def idFromString(id: String) = id
+case class TodoUser(id: String) extends UserWithIdentity[String] {
+  def rawId = id
 }
 
-object TodoDefaultUserService extends UserService[String, AuthenticationFailure, TodoUser] {
-  def findById(id: String)(implicit ec: ExecutionContext) = future { Success(TodoUser(id)) }
+object TodoDefaultUserService extends UserService[String,TodoUser,AuthenticationFailure] {
+  def find(id: String)(implicit ec: ExecutionContext) = future { Success(TodoUser(id)) }
 }
 
-object TodoCredentialsValidator extends CredentialValidator[TodoUser, IdPass[String], AuthenticationFailure] {
+object TodoCredentialsValidator extends CredentialValidator[String, TodoUser, IdPass[String], AuthenticationFailure] {
   def validate(user: TodoUser, credential: IdPass[String]) = Success(user)
 }
 
@@ -26,7 +25,8 @@ object DefaultUserProvider extends UserPasswordProvider[String,TodoUser] {
   override val credentialsValidator = TodoCredentialsValidator
 }
 
-object DefaultAuthenticator extends Providers[String,TodoUser] {
-  override val idService = TodoIdService
+object DefaultProviders extends Providers[String,TodoUser] {
+  override val str2id = StringAsId
   override val userPasswordProvider = DefaultUserProvider
+  override val authenticator = DefaultAuthenticator
 }

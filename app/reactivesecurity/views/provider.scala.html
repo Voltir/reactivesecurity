@@ -1,6 +1,6 @@
 @(providerId: String, loginForm: Option[Form[(String,String)]] = None)
 
-<form action=@reactivesecurity.defaults.routes.DefaultAuthenticator.authenticateByPost("userpass")
+<form action=@reactivesecurity.defaults.routes.DefaultProviders.authenticateByPost("userpass")
     class="form-horizontal" autocomplete="off" method="POST">
 
 <fieldset>

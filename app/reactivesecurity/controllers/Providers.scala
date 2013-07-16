@@ -1,24 +1,25 @@
 package reactivesecurity.controllers
 
 import play.api.mvc._
-import reactivesecurity.core.providers.{IdPass, UserPasswordProvider}
-import scalaz.Failure
-import scalaz.Success
+import play.api.Logger
+
+import reactivesecurity.core.providers.{UserPasswordProvider,IdPass}
+import reactivesecurity.core.User.{IdFromString, UserWithIdentity}
 import reactivesecurity.core.std.AuthenticationServiceFailure
-import reactivesecurity.core.User.{UserWithIdentity, IdService}
+import reactivesecurity.core.{LoginHandler, Authenticator}
+
 import scala.concurrent.{ExecutionContext, future}
 import ExecutionContext.Implicits.global
-import reactivesecurity.core.providers.IdPass
-import scalaz.Success
-import reactivesecurity.core.std.AuthenticationServiceFailure
-import scalaz.Failure
-import play.api.Logger
-import reactivesecurity.core.Authenticator
 
-abstract class Providers[ID, USER >: UserWithIdentity[ID]] extends Controller {
-  val idService: IdService[ID]
+import scalaz.{Failure,Success}
+
+
+abstract class Providers[ID, USER <: UserWithIdentity[ID]] extends Controller {
+  val str2id: IdFromString[ID]
   val userPasswordProvider: UserPasswordProvider[ID,USER]
   val authenticator: Authenticator
+
+  def toUrl(implicit request: RequestHeader) = session.get(LoginHandler.OriginalUrlKey).getOrElse(LoginHandler.landingUrl)
 
   def authenticate(provider: String) = handleAuth(provider)
   def authenticateByPost(provider: String) = handleAuth(provider)
@@ -45,10 +46,11 @@ abstract class Providers[ID, USER >: UserWithIdentity[ID]] extends Controller {
       case _ => NotFound
     }
     */
+    println("AAAAAAAAAAAAAA authenticate -> handleAuth")
     val resultPromise = UserPasswordProvider.loginForm.bindFromRequest().fold(
       errors => future { Ok("Errors") },
       { case (id: String, password: String) => {
-        val credentials = IdPass(idService.idFromString(id),password)
+        val credentials = IdPass(str2id(id),password)
         userPasswordProvider.authenticate(credentials).map { result =>
           result match {
             case Failure(AuthenticationServiceFailure(f)) => Ok("Errors")
@@ -63,14 +65,16 @@ abstract class Providers[ID, USER >: UserWithIdentity[ID]] extends Controller {
     }
   }
 
-  def completeAuthentication(user: UserWithIdentity[ID], session: Session)(implicit request: RequestHeader): Result = {
+  def completeAuthentication(user: USER, session: Session)(implicit request: RequestHeader): Result = {
     if ( Logger.isDebugEnabled ) {
       Logger.debug("[reactivesecurity] user logged in : [" + user + "]")
     }
     //TODO val withSession = Events.fire(new LoginEvent(user)).getOrElse(session)
     authenticator.create(user.rawId) match {
-      case Failure(_) => Ok("TODO")
+      case Failure(_) => Ok("TODO -- ERROR completeAuthentication")
       case Success(token) => {
+        println("Doing redirect "+toUrl)
+        println("Cookie: "+token.toCookie)
         Redirect(toUrl).withCookies(token.toCookie)
       }
     }
@@ -88,6 +92,5 @@ abstract class Providers[ID, USER >: UserWithIdentity[ID]] extends Controller {
       }
     }
     */
-    Ok("TODO")
   }
 }
