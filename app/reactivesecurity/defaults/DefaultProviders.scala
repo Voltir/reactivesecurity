@@ -4,29 +4,26 @@ import scala.concurrent.{ExecutionContext, future}
 import scalaz.{Validation, Success}
 
 import reactivesecurity.controllers.Providers
-import reactivesecurity.core.User.{ UserWithIdentity, CredentialValidator, UserService}
+import reactivesecurity.core.User.{ UsingID, CredentialValidator, UserService}
 import reactivesecurity.core.providers.{IdPass, UserPasswordProvider}
-import reactivesecurity.core.std.{StringAsId, AuthenticationFailure}
+import reactivesecurity.core.std.{StringFromString, AuthenticationFailure}
 
-case class TodoUser(id: String) extends UserWithIdentity[String] {
-  def rawId = id
+case class TodoUser(id: String) extends UsingID[String] {
 }
 
-object TodoDefaultUserService extends UserService[String,TodoUser,AuthenticationFailure] {
-  def find(id: String)(implicit ec: ExecutionContext) = future { Success(TodoUser(id)) }
-}
+object DefaultUserService extends InMemoryUserService[String,TodoUser]
 
-object TodoCredentialsValidator extends CredentialValidator[String, TodoUser, IdPass[String], AuthenticationFailure] {
+object TodoCredentialsValidator extends CredentialValidator[TodoUser, IdPass[String], AuthenticationFailure] {
   def validate(user: TodoUser, credential: IdPass[String]) = Success(user)
 }
 
 object DefaultUserProvider extends UserPasswordProvider[String,TodoUser] {
-  override val userService = TodoDefaultUserService
+  override val userService = DefaultUserService
   override val credentialsValidator = TodoCredentialsValidator
 }
 
 object DefaultProviders extends Providers[String,TodoUser] {
-  override val str2id = StringAsId
+  override val str2id = StringFromString
   override val userPasswordProvider = DefaultUserProvider
   override val authenticator = DefaultAuthenticator
 }

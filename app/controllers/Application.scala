@@ -7,15 +7,13 @@ import ExecutionContext.Implicits.global
 
 import reactivesecurity.core.Authentication.{AsyncInputValidator, AuthenticationFailureHandler}
 import reactivesecurity.core.std.AuthenticationFailure
-import reactivesecurity.core.User.UserWithIdentity
+import reactivesecurity.core.User.UsingID
 import reactivesecurity.defaults.DefaultInputValidator
 
 
-case class DemoUser(id: String, password: String) extends UserWithIdentity[String] {
-  def rawId = id
-}
+case class DemoUser(id: String, password: String) extends UsingID[String]
 
-object FooInputValidator extends AsyncInputValidator[Request[AnyContent],String,DemoUser,AuthenticationFailure] {
+object FooInputValidator extends AsyncInputValidator[Request[AnyContent],DemoUser,AuthenticationFailure] {
   def validateInput(in: Request[AnyContent])(implicit ec: ExecutionContext): Future[Validation[AuthenticationFailure,DemoUser]] = {
     future { Success(DemoUser("Bob","Password")) }
   }
@@ -27,7 +25,7 @@ object FooAuthFailueHandler extends Controller with AuthenticationFailureHandler
   }
 }
 
-trait DemoSecured extends Controller with reactivesecurity.core.AsyncSecured[AnyContent,String,DemoUser] {
+trait DemoSecured extends Controller with reactivesecurity.core.AsyncSecured[AnyContent,DemoUser] {
   override val inputValidator = new DefaultInputValidator[DemoUser]
   override val authFailureHandler = FooAuthFailueHandler
 }

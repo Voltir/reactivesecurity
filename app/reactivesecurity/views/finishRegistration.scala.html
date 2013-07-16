@@ -1,0 +1,39 @@
+@(userForm: Form[reactivesecurity.defaults.TodoUser], confirmation: String)(implicit request: RequestHeader)
+@import helper._
+
+@main( Messages("reactivesecurity.signup.title") ) {
+    <div class="page-header">
+        <h1>@Messages("securesocial.signup.title")</h1>
+    </div>
+
+    @request.flash.get("error").map { msg =>
+    <div class="alert alert-error">
+        @Messages(msg)
+    </div>
+    }
+
+    @helper.form(reactivesecurity.defaults.routes.DefaultLogin.handleRegistration(confirmation)) {
+        <fieldset>
+            @helper.inputText(userForm("name"),
+                '_label -> Messages("TODO"),
+                'class -> "input-xlarge"
+            )
+
+            @helper.inputText(userForm("password.password1"),
+                '_label -> Messages("password1"),
+                'class -> "input-xlarge"
+            )
+
+            @helper.inputText(userForm("password.password2"),
+                '_label -> Messages("password2"),
+                'class -> "input-xlarge"
+            )
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">@Messages("securesocial.signup.createAccount")</button>
+                <a class="btn" href="/securesocial.core.providers.utils.RoutesHelper.login()">@Messages("securesocial.signup.cancel")</a>
+            </div>
+
+        </fieldset>
+    }
+}

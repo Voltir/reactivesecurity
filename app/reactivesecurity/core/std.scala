@@ -1,10 +1,13 @@
 package reactivesecurity.core
 
-import reactivesecurity.core.User.{IdFromString, UserWithIdentity}
+import reactivesecurity.core.User.{IdFromString, UsingID}
 import scalaz.{Failure,Validation}
 import reactivesecurity.core.Authentication.AsyncInputValidator
 import scala.concurrent.{ExecutionContext, future, Future}
 import play.api.mvc.{AnyContent, Request, RequestHeader}
+import play.api.data.Form
+import play.api.data.Forms._
+import scalaz.Failure
 
 object std {
   trait AuthenticationFailure
@@ -18,11 +21,11 @@ object std {
   case class ValidationFailure() extends UserServiceFailure
 
   //Standard IdFromString
-  object StringAsId extends IdFromString[String] {
+  object StringFromString extends IdFromString[String] {
     override def apply(id: String) = id
   }
 
-  abstract class AuthenticatedInputValidator[ID, USER <: UserWithIdentity[ID]] extends AsyncInputValidator[Request[AnyContent],ID,USER,AuthenticationFailure] {
+  abstract class AuthenticatedInputValidator[ID,USER <: UsingID[ID]] extends AsyncInputValidator[Request[AnyContent],USER,AuthenticationFailure] {
 
     val authenticator: reactivesecurity.core.Authenticator
     val users: reactivesecurity.core.User.UserService[ID,USER,UserServiceFailure]

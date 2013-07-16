@@ -4,7 +4,7 @@ import play.api.mvc._
 import play.api.Logger
 
 import reactivesecurity.core.providers.{UserPasswordProvider,IdPass}
-import reactivesecurity.core.User.{IdFromString, UserWithIdentity}
+import reactivesecurity.core.User.{UsingID, IdFromString}
 import reactivesecurity.core.std.AuthenticationServiceFailure
 import reactivesecurity.core.{LoginHandler, Authenticator}
 
@@ -14,7 +14,7 @@ import ExecutionContext.Implicits.global
 import scalaz.{Failure,Success}
 
 
-abstract class Providers[ID, USER <: UserWithIdentity[ID]] extends Controller {
+abstract class Providers[ID,USER <: UsingID[ID]] extends Controller {
   val str2id: IdFromString[ID]
   val userPasswordProvider: UserPasswordProvider[ID,USER]
   val authenticator: Authenticator
@@ -70,7 +70,7 @@ abstract class Providers[ID, USER <: UserWithIdentity[ID]] extends Controller {
       Logger.debug("[reactivesecurity] user logged in : [" + user + "]")
     }
     //TODO val withSession = Events.fire(new LoginEvent(user)).getOrElse(session)
-    authenticator.create(user.rawId) match {
+    authenticator.create(user.id.toString) match {
       case Failure(_) => Ok("TODO -- ERROR completeAuthentication")
       case Success(token) => {
         println("Doing redirect "+toUrl)

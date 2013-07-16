@@ -5,6 +5,10 @@
 # Home page
 GET     /                               reactivesecurity.defaults.DefaultLogin.login
 POST    /login/:provider                reactivesecurity.defaults.DefaultProviders.authenticateByPost(provider)
+GET     /registration/start             reactivesecurity.defaults.DefaultLogin.startRegistration
+POST    /registration/start             reactivesecurity.defaults.DefaultLogin.handleStartRegistration
+GET     /registration/:uuid             reactivesecurity.defaults.DefaultLogin.registration(uuid: String)
+POST    /registration/:uuid             reactivesecurity.defaults.DefaultLogin.handleRegistration(uuid: String)
 GET     /index                          controllers.Application.index
 GET     /foo                            controllers.Application.foo
 

@@ -3,7 +3,7 @@ package reactivesecurity.core
 import scalaz.Validation
 import scala.concurrent.{ExecutionContext, Future, future}
 
-import reactivesecurity.core.User.{UserWithIdentity, UserProvider}
+import reactivesecurity.core.User.{UsingID, UserProvider}
 
 object Authentication {
 
@@ -15,11 +15,11 @@ object Authentication {
     def authentication(action: (IN,USR) => OUT)(implicit ec: ExecutionContext): IN => Future[OUT]
   }
 
-  trait InputValidator[-IN,+USER,+FAILURE] {
+  trait InputValidator[IN,USER,FAILURE] {
     def validateInput(in: IN): Validation[FAILURE,USER]
   }
 
-  trait AsyncInputValidator[-IN,ID,USER <: UserWithIdentity[ID],+FAILURE] {
+  trait AsyncInputValidator[IN,USER <: UsingID[_],FAILURE] {
     def validateInput(in: IN)(implicit ec: ExecutionContext): Future[Validation[FAILURE,USER]]
   }
 
@@ -48,8 +48,8 @@ object Authentication {
     }
   }
 
-  trait AsyncAuthentication[IN,OUT,ID,USER <: UserWithIdentity[ID],FAILURE] extends AsyncAuthenticationProcess[IN,OUT,USER] {
-    val inputValidator: AsyncInputValidator[IN,ID,USER,FAILURE]
+  trait AsyncAuthentication[IN,OUT,USER <: UsingID[_],FAILURE] extends AsyncAuthenticationProcess[IN,OUT,USER] {
+    val inputValidator: AsyncInputValidator[IN,USER,FAILURE]
     val authFailureHandler: AuthenticationFailureHandler[IN,FAILURE,OUT]
 
     override def authentication(action: (IN,USER) => OUT)(implicit ec: ExecutionContext): IN => Future[OUT] = {
@@ -64,8 +64,8 @@ object Authentication {
     }
   }
 
-  trait AuthenticationService[-Credentials, User, +F] {
-    def authenticate(credentials: Credentials): Future[Validation[F,User]]
+  trait AuthenticationService[-CREDENTIALS, USER, +FAILURE] {
+    def authenticate(credentials: CREDENTIALS): Future[Validation[FAILURE,USER]]
   }
 
   trait AuthorizationService[-USER,-RESOURCE,+FAILURE] {
