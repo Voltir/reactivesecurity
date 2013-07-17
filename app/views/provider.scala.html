@@ -1,6 +1,6 @@
 @(providerId: String, loginForm: Option[Form[(String,String)]] = None)
 
-<form action=@reactivesecurity.defaults.routes.DefaultProviders.authenticateByPost("userpass")
+<form action=@routes.DemoProviders.authenticateByPost("userpass")
     class="form-horizontal" autocomplete="off" method="POST"
 >
 
@@ -22,7 +22,7 @@
         <a href="/reactivesecurity.core.providers.utils.RoutesHelper.startResetPassword()"><p>@Messages("reactivesecurity.login.forgotPassword") </a></p>
     </div>
     <div class="clearfix">
-        <p>@Messages("reactivesecurity.login.signUp") <a href="@reactivesecurity.defaults.routes.DefaultLogin.startRegistration()">@Messages("reactivesecurity.login.here")</a></p>
+        <p>@Messages("reactivesecurity.login.signUp") <a href="@routes.DemoLogin.startRegistration()">@Messages("reactivesecurity.login.here")</a></p>
     </div>
 </fieldset>
 </form>

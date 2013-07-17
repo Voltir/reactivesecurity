@@ -1,4 +1,4 @@
-@(userForm: Form[reactivesecurity.defaults.TodoUser], confirmation: String)(implicit request: RequestHeader)
+@(userForm: Form[DemoUser], confirmation: String)(implicit request: RequestHeader)
 @import helper._
 
 @main( Messages("reactivesecurity.signup.title") ) {
@@ -12,7 +12,7 @@
     </div>
     }
 
-    @helper.form(reactivesecurity.defaults.routes.DefaultLogin.handleRegistration(confirmation)) {
+    @helper.form(routes.DemoLogin.handleRegistration(confirmation)) {
         <fieldset>
             @helper.inputText(userForm("name"),
                 '_label -> Messages("TODO"),

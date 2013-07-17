@@ -16,7 +16,7 @@ class InMemoryUserService[ID,USER <: UsingID[ID]] extends UserService[ID,USER,Us
   }
 
   //TODO Make future?
-  override def save(user: USER) = {
+  override def save(user: USER): Unit = {
     users += user.id -> user
   }
 }

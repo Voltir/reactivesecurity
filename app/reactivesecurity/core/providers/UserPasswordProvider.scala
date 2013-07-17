@@ -1,37 +1,25 @@
 package reactivesecurity.core.providers
 
-import play.api.data.Form
-import play.api.data.Forms._
 import reactivesecurity.core.Authentication.AuthenticationService
-import reactivesecurity.core.std.{UserServiceFailure, AuthenticationServiceFailure, AuthenticationFailure}
+import reactivesecurity.core.std.{AuthenticationServiceFailure, AuthenticationFailure}
 import scalaz.{Success, Failure, Validation}
-import reactivesecurity.core.User.{UsingID, UserService, CredentialValidator}
+import reactivesecurity.core.User.{RequiresUsers, UsingID, CredentialValidator}
 import scala.concurrent.{ExecutionContext,  Future}
 import ExecutionContext.Implicits.global
 
 case class IdPass[ID](id: ID, password: String)
 
-trait UserPasswordProvider[ID,USER <: UsingID[ID]] extends AuthenticationService[IdPass[ID],USER,AuthenticationFailure] {
+trait UserPasswordProvider[ID,USER <: UsingID[ID]] extends AuthenticationService[IdPass[ID],USER,AuthenticationFailure] with RequiresUsers[ID,USER] {
 
-  val userService: UserService[ID,USER,UserServiceFailure]
   val credentialsValidator: CredentialValidator[USER, IdPass[ID], AuthenticationFailure]
 
-  def authenticate(credentials: IdPass[ID]): Future[Validation[AuthenticationFailure,USER]] =  {
+  override def authenticate(credentials: IdPass[ID]): Future[Validation[AuthenticationFailure,USER]] =  {
     println("TODO -- authenticate -- UserPassProvider: "+credentials)
-    userService.find(credentials.id).map { check =>
+    users.find(credentials.id).map { check =>
       check match {
         case Failure(f) => Failure(AuthenticationServiceFailure(f))
         case Success(user) => credentialsValidator.validate(user,credentials)
       }
     }
   }
-}
-
-object UserPasswordProvider {
-  val loginForm = Form[(String,String)](
-    tuple(
-      "username" -> nonEmptyText,
-      "password" -> nonEmptyText
-    )
-  )
 }

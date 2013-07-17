@@ -15,4 +15,8 @@ object InMemoryConfirmationTokenService extends ConfirmationTokenService {
     tokens.get(uuid)
   }
 
+  def delete(uuid: String): Unit = {
+    tokens.remove(uuid)
+  }
+
 }

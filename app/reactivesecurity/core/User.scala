@@ -2,6 +2,7 @@ package reactivesecurity.core
 
 import scalaz.Validation
 import scala.concurrent.{ExecutionContext, Future}
+import reactivesecurity.core.std.UserServiceFailure
 
 
 object User {
@@ -14,10 +15,6 @@ object User {
     def user: USER
   }
 
-  trait IdFromString[ID] {
-    def apply(id: String): ID
-  }
-
   trait UserService[ID,USER <: UsingID[ID],FAILURE] {
     def find(id: ID)(implicit ec: ExecutionContext): Future[Validation[FAILURE, USER]]
     def save(user: USER): Unit
@@ -26,4 +23,10 @@ object User {
   trait CredentialValidator[USER <: UsingID[_], CRED, FAIL] {
     def validate(user: USER, credential: CRED): Validation[FAIL,USER]
   }
+
+  trait RequiresUsers[ID,USER <: UsingID[ID]] {
+    val users: UserService[ID,USER,UserServiceFailure]
+    def string2Id(inp: String): ID
+  }
+
 }

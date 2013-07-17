@@ -7,13 +7,13 @@ import reactivesecurity.core.User.UsingID
 import play.api.data.Form
 
 trait LoginHandler[USER <: UsingID[_]] {
-  //def getLoginPage(in: Request[AnyContent]): Html
   def getLoginPage(request: RequestHeader): Html
   def getRegistrationStartPage(request: RequestHeader): Html
   def getRegistrationPage(request: RequestHeader, confirmation: String): Html
 
-  def startRegistrationCall: Call
-  def afterRegistrationCall: Call
+  def registrationStartRedirect: Call
+  def registrationAfterRedirect: Call
+  def registrationDoneRedirect: Call
 
   def userForm: Form[USER]
 }

@@ -3,21 +3,23 @@ package reactivesecurity.core
 import scalaz.Validation
 import scala.concurrent.{ExecutionContext, Future, future}
 
-import reactivesecurity.core.User.{UsingID, UserProvider}
+import reactivesecurity.core.User.UsingID
 
 object Authentication {
-
+  /*
   trait AuthenticationProcess[IN,OUT,USR] {
     def authentication(action: (IN,USR) => OUT): IN => OUT
   }
-
+  */
   trait AsyncAuthenticationProcess[IN,OUT,USR] {
     def authentication(action: (IN,USR) => OUT)(implicit ec: ExecutionContext): IN => Future[OUT]
   }
 
+  /*
   trait InputValidator[IN,USER,FAILURE] {
     def validateInput(in: IN): Validation[FAILURE,USER]
   }
+  */
 
   trait AsyncInputValidator[IN,USER <: UsingID[_],FAILURE] {
     def validateInput(in: IN)(implicit ec: ExecutionContext): Future[Validation[FAILURE,USER]]
@@ -26,7 +28,7 @@ object Authentication {
   trait AuthenticationFailureHandler[IN,FAIL,OUT] {
     def onAuthenticationFailure(in: IN, failure: FAIL): OUT
   }
-
+  /*
   trait NoAuthentication[IN,OUT,USR] extends AuthenticationProcess[IN,OUT,USR] {
     val userProvider: UserProvider[USR]
     override def authentication(action: (IN,USR) => OUT): IN => OUT = {
@@ -47,6 +49,7 @@ object Authentication {
       }
     }
   }
+  */
 
   trait AsyncAuthentication[IN,OUT,USER <: UsingID[_],FAILURE] extends AsyncAuthenticationProcess[IN,OUT,USER] {
     val inputValidator: AsyncInputValidator[IN,USER,FAILURE]
