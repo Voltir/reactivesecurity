@@ -21,7 +21,7 @@ object Authentication {
   }
   */
 
-  trait AsyncInputValidator[IN,USER <: UsingID[_],FAILURE] {
+  trait AsyncInputValidator[IN,USER <: UsingID,FAILURE] {
     def validateInput(in: IN)(implicit ec: ExecutionContext): Future[Validation[FAILURE,USER]]
   }
 
@@ -51,7 +51,7 @@ object Authentication {
   }
   */
 
-  trait AsyncAuthentication[IN,OUT,USER <: UsingID[_],FAILURE] extends AsyncAuthenticationProcess[IN,OUT,USER] {
+  trait AsyncAuthentication[IN,OUT,USER <: UsingID,FAILURE] extends AsyncAuthenticationProcess[IN,OUT,USER] {
     val inputValidator: AsyncInputValidator[IN,USER,FAILURE]
     val authFailureHandler: AuthenticationFailureHandler[IN,FAILURE,OUT]
 

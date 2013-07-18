@@ -44,19 +44,19 @@ trait ConfirmationTokenService {
   def delete(uuid: String): Unit
 }
 
-abstract class Login[ID,USER <: UsingID[ID]] extends Controller with RequiresUsers[ID,USER] {
+abstract class Login[USER <: UsingID] extends Controller with RequiresUsers[USER] {
 
   val confirmationTokenService: ConfirmationTokenService
 
   def getLoginPage(request: RequestHeader): Html
   def getRegistrationStartPage(request: RequestHeader): Html
-  def getRegistrationPage(request: RequestHeader, confirmation: String): Html
+  def getRegistrationPage(request: RequestHeader, confirmation: String, registrationForm: Form[USER]): Html
 
   def registrationStartRedirect: Call
   def registrationAfterRedirect: Call
   def registrationDoneRedirect: Call
 
-  def userForm: Form[USER]
+  def getUserForm(id: USER#ID): Form[USER]
 
   def login = Action { implicit request =>
     /*
@@ -85,7 +85,7 @@ abstract class Login[ID,USER <: UsingID[ID]] extends Controller with RequiresUse
       LoginForms.registrationForm.bindFromRequest.fold(
         errors => future { println("TODO REGISTRATION: "+errors); BadRequest(getRegistrationStartPage(request)) },
         { case (email,pass) =>
-          val id = string2Id(email)
+          val id = str2ID(email)
           users.find(id).map { validation =>
             validation.map { user =>
               println("Send already registered email")
@@ -113,8 +113,8 @@ abstract class Login[ID,USER <: UsingID[ID]] extends Controller with RequiresUse
 
   def registration(confirmation: String) = Action { implicit request =>
     Async {
-      executeForToken(confirmation, true, { _ =>
-         Ok(getRegistrationPage(request,confirmation))
+      executeForToken(confirmation, true, { c =>
+         Ok(getRegistrationPage(request,confirmation,getUserForm(str2ID(c.email))))
       })
     }
   }
@@ -122,7 +122,7 @@ abstract class Login[ID,USER <: UsingID[ID]] extends Controller with RequiresUse
   def handleRegistration(confirmation: String) =  Action { implicit request =>
     Async {
       executeForToken(confirmation, true, { c =>
-        userForm.bindFromRequest.fold(
+        getUserForm(str2ID(c.email)).bindFromRequest.fold(
           errors => { println(errors); Ok("TODO -- handleRegistration -- ERRORS") },
           user => {
             /*

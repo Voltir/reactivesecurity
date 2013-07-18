@@ -7,16 +7,20 @@ import scalaz._
 import reactivesecurity.core.User.{UsingID, UserService}
 import reactivesecurity.core.std.{UserServiceFailure, IdentityNotFound}
 
-class InMemoryUserService[ID,USER <: UsingID[ID]] extends UserService[ID,USER,UserServiceFailure] {
+class InMemoryUserService[USER <: UsingID] extends UserService[USER] {
 
-  private val users: mutable.Map[ID,USER] = mutable.Map()
+  private var users: mutable.Map[USER#ID,USER] = mutable.Map()
 
-  override def find(id: ID)(implicit ec: ExecutionContext) = future {
+  override def find(id: USER#ID)(implicit ec: ExecutionContext) = future {
+    println("Finding: "+ id)
+    println(users)
     users.get(id).map(Success(_)).getOrElse(Failure(IdentityNotFound(id)))
   }
 
   //TODO Make future?
   override def save(user: USER): Unit = {
-    users += user.id -> user
+    println("Saving: "+user)
+    users += (user.id -> user)
+    println(users)
   }
 }

@@ -14,18 +14,20 @@ object std {
 
   abstract class UserServiceFailure extends AuthenticationFailure
 
-  case class IdentityNotFound[ID](username: ID) extends UserServiceFailure
+  case class IdentityNotFound[USER <: UsingID](userid: USER#ID) extends UserServiceFailure
 
   case class AuthenticationServiceFailure[A](underlyingError: A) extends AuthenticationFailure
 
   case class ValidationFailure() extends UserServiceFailure
 
+  case class InvalidPassword() extends AuthenticationFailure
 
-  abstract class AuthenticatedInputValidator[ID,USER <: UsingID[ID]] extends AsyncInputValidator[Request[AnyContent],USER,AuthenticationFailure] with RequiresUsers[ID,USER] {
+
+  abstract class AuthenticatedInputValidator[USER <: UsingID] extends AsyncInputValidator[Request[AnyContent],USER,AuthenticationFailure] with RequiresUsers[USER] {
     val authenticator: reactivesecurity.core.Authenticator
     override def validateInput(in: Request[AnyContent])(implicit ec: ExecutionContext): Future[Validation[UserServiceFailure,USER]] = {
       authenticator.find(in).map(
-        token => users.find(string2Id(token.uid))
+        token => users.find(str2ID(token.uid))
       ).getOrElse(future { Failure[UserServiceFailure,USER](ValidationFailure().asInstanceOf[UserServiceFailure]) } )
     }
   }

@@ -16,7 +16,7 @@ trait Secured[A,USER <: UsingID[_]] extends Controller with Authentication[Reque
 }
 */
 
-trait AsyncSecured[A,USER <: UsingID[_]] extends Controller with AsyncAuthentication[Request[A],Result,USER,AuthenticationFailure] {
+trait AsyncSecured[A,USER <: UsingID] extends Controller with AsyncAuthentication[Request[A],Result,USER,AuthenticationFailure] {
   def AsyncSecuredAction(p: BodyParser[A])(f: (Request[A],USER) => Result)(implicit ec: ExecutionContext) = Action(p) { implicit request =>
     Async {
       authentication(f)(ec)(request)

@@ -6,7 +6,7 @@ import play.api.templates.Html
 import reactivesecurity.core.User.UsingID
 import play.api.data.Form
 
-trait LoginHandler[USER <: UsingID[_]] {
+trait LoginHandler[USER <: UsingID] {
   def getLoginPage(request: RequestHeader): Html
   def getRegistrationStartPage(request: RequestHeader): Html
   def getRegistrationPage(request: RequestHeader, confirmation: String): Html

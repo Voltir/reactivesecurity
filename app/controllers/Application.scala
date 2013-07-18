@@ -18,7 +18,9 @@ import reactivesecurity.controllers.ConfirmationTokenService
 import play.api.templates.Html
 
 
-case class DemoUser(id: String, password: String) extends UsingID[String]
+case class DemoUser(id: String, password: String) extends UsingID {
+  type ID = String
+}
 
 /*
 object FooInputValidator extends AsyncInputValidator[Request[AnyContent],DemoUser,AuthenticationFailure] {
@@ -90,13 +92,18 @@ object TodoAuthFailueHandler extends Controller with AuthenticationFailureHandle
   }
 }
 
-trait DemoUsers extends RequiresUsers[String,DemoUser] {
-  override val users = new InMemoryUserService[String,DemoUser]
-  def string2Id(inp: String) = inp
+object InMemoryDemoUsers extends InMemoryUserService[DemoUser]
+
+trait DemoUsers extends RequiresUsers[DemoUser] {
+  //TODO -- Shoot feet here... an InMemoryUserService must be a singleton or it will initilize multiple instances :/
+  //what to do, what to do... cant really adopt the same solution that SecureSocial does, as I want to paramterize
+  //on the user type... hrmmmmm
+  override val users = InMemoryDemoUsers
+  override def str2ID(inp: String) = inp
 }
 
 trait DemoSecured extends Controller with reactivesecurity.core.AsyncSecured[AnyContent,DemoUser] {
-  override val inputValidator = new DefaultInputValidator[String,DemoUser] with DemoUsers
+  override val inputValidator = new DefaultInputValidator[DemoUser] with DemoUsers
   override val authFailureHandler = TodoAuthFailueHandler
 }
 
@@ -112,31 +119,25 @@ object Application extends DemoSecured {
   
 }
 
-object DemoProviders extends reactivesecurity.defaults.DefaultProviders[String,DemoUser] {
-  override val userPasswordProvider = new DefaultUserPasswordProvider[String,DemoUser] with DemoUsers
+object DemoProviders extends reactivesecurity.defaults.DefaultProviders[DemoUser] {
+  override val userPasswordProvider = new DefaultUserPasswordProvider[DemoUser] with DemoUsers
 }
 
-object DemoLogin extends reactivesecurity.defaults.DefaultLogin[String,DemoUser] with DemoUsers {
+object DemoLogin extends reactivesecurity.defaults.DefaultLogin[DemoUser] with DemoUsers {
 
-  def getLoginPage(request: RequestHeader): Html =
-    views.html.login(loginForm)
-
+  def getLoginPage(request: RequestHeader): Html = { println(routes.DemoLogin); views.html.login(loginForm) }
   def getRegistrationStartPage(request: RequestHeader): Html =
     views.html.startRegistration(registrationForm)(request)
-
-  def getRegistrationPage(request: RequestHeader, confirmation: String): Html =
-    views.html.finishRegistration(userForm,confirmation)(request)
-
+  def getRegistrationPage(request: RequestHeader, confirmation: String, registrationForm: Form[DemoUser]): Html =
+    views.html.finishRegistration(registrationForm,confirmation)(request)
 
   def registrationStartRedirect: Call = routes.DemoLogin.startRegistration
-
   def registrationAfterRedirect: Call = routes.DemoLogin.login
-
-  def registrationDoneRedirect: Call = routes.DemoLogin.login
+  def registrationDoneRedirect: Call = routes.Application.foo
 
   val userEmail = "Wat@Wat.com"
 
-  val userForm = Form[DemoUser](
+  def getUserForm(id: String) = { Form[DemoUser](
     mapping(
       "name" -> nonEmptyText,
       ("password" ->
@@ -145,9 +146,7 @@ object DemoLogin extends reactivesecurity.defaults.DefaultLogin[String,DemoUser]
           "password2" -> nonEmptyText
         ).verifying(Messages("passwords.dont.match"), passwords => passwords._1 == passwords._2)
         )
-    )
-      ((name, password) => DemoUser(userEmail,password._1))
-      (user => Some(user.id,("","")))
-  )
+    )((name, password) => DemoUser(id,password._1))(user => Some(user.id,("","")))
+  )}
 
 }

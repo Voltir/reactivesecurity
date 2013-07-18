@@ -14,8 +14,8 @@ import ExecutionContext.Implicits.global
 import scalaz.{Failure,Success}
 
 
-abstract class Providers[ID,USER <: UsingID[ID]] extends Controller {
-  val userPasswordProvider: UserPasswordProvider[ID,USER]
+abstract class Providers[USER <: UsingID] extends Controller {
+  val userPasswordProvider: UserPasswordProvider[USER]
   val authenticator: Authenticator
 
   def toUrl(implicit request: RequestHeader) = session.get(LoginHandler.OriginalUrlKey).getOrElse(LoginHandler.landingUrl)
@@ -49,10 +49,10 @@ abstract class Providers[ID,USER <: UsingID[ID]] extends Controller {
     val resultPromise = LoginForms.loginForm.bindFromRequest().fold(
       errors => future { Ok("Errors") },
       { case (id: String, password: String) => {
-        val credentials = IdPass(userPasswordProvider.string2Id(id),password)
+        val credentials = IdPass(userPasswordProvider.str2ID(id),password)
         userPasswordProvider.authenticate(credentials).map { result =>
           result match {
-            case Failure(AuthenticationServiceFailure(f)) => Ok("Errors")
+            case Failure(AuthenticationServiceFailure(f)) => Ok(f.toString)
             case Failure(_) => Ok("Other Errors")
             case Success(user) => completeAuthentication(user,session)
           }
