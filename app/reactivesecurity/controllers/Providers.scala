@@ -53,7 +53,7 @@ abstract class Providers[USER <: UsingID] extends Controller {
         userPasswordProvider.authenticate(credentials).map { result =>
           result match {
             case Failure(AuthenticationServiceFailure(f)) => Ok(f.toString)
-            case Failure(_) => Ok("Other Errors")
+            case Failure(wat) => Ok("Other Errors: " + wat)
             case Success(user) => completeAuthentication(user,session)
           }
         }

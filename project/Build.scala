@@ -11,12 +11,16 @@ object ApplicationBuild extends Build {
     // Add your project dependencies here,
     jdbc,
     anorm,
-    "org.scalaz" %% "scalaz-core" % "7.0.1"
+    "org.scalaz" %% "scalaz-core" % "7.0.1",
+    "org.mindrot" % "jbcrypt" % "0.3m"
   )
 
 
   val main = play.Project(appName, appVersion, appDependencies).settings(
-    // Add your own project settings here      
+    resolvers ++= Seq(
+      "jBCrypt Repository" at "http://repo1.maven.org/maven2/org/",
+      "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
+    )
   )
 
 }

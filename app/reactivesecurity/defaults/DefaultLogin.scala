@@ -13,8 +13,7 @@ import reactivesecurity.core.User.UsingID
 
 
 abstract class DefaultLogin[USER <: UsingID] extends Login[USER] {
-  val userService = new InMemoryUserService[USER]
-  val confirmationTokenService = InMemoryConfirmationTokenService
+  override val confirmationTokenService = InMemoryConfirmationTokenService
 }
 
 /*
