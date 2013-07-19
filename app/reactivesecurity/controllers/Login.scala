@@ -13,8 +13,7 @@ import play.api.i18n.Messages
 import play.api.data._
 import play.api.data.Forms._
 
-import reactivesecurity.core.User.{RequiresUsers,UsingID}
-import reactivesecurity.core.std.{UserServiceFailure}
+import reactivesecurity.core.User.{UserService, AsID, UsingID}
 import reactivesecurity.core.LoginHandler
 import play.api.templates.Html
 
@@ -44,9 +43,10 @@ trait ConfirmationTokenService {
   def delete(uuid: String): Unit
 }
 
-abstract class Login[USER <: UsingID] extends Controller with RequiresUsers[USER] {
-
+abstract class Login[USER <: UsingID] extends Controller {
+  val users: UserService[USER]
   val confirmationTokenService: ConfirmationTokenService
+  val asID: AsID[USER]
 
   def getLoginPage(request: RequestHeader): Html
   def getRegistrationStartPage(request: RequestHeader): Html
@@ -85,7 +85,7 @@ abstract class Login[USER <: UsingID] extends Controller with RequiresUsers[USER
       LoginForms.registrationForm.bindFromRequest.fold(
         errors => future { println("TODO REGISTRATION: "+errors); BadRequest(getRegistrationStartPage(request)) },
         { case (email,pass) =>
-          val id = str2ID(email)
+          val id = asID(email)
           users.find(id).map { validation =>
             validation.map { user =>
               println("Send already registered email")
@@ -114,7 +114,7 @@ abstract class Login[USER <: UsingID] extends Controller with RequiresUsers[USER
   def registration(confirmation: String) = Action { implicit request =>
     Async {
       executeForToken(confirmation, true, { c =>
-         Ok(getRegistrationPage(request,confirmation,getUserForm(str2ID(c.email))))
+         Ok(getRegistrationPage(request,confirmation,getUserForm(asID(c.email))))
       })
     }
   }
@@ -122,7 +122,7 @@ abstract class Login[USER <: UsingID] extends Controller with RequiresUsers[USER
   def handleRegistration(confirmation: String) =  Action { implicit request =>
     Async {
       executeForToken(confirmation, true, { c =>
-        getUserForm(str2ID(c.email)).bindFromRequest.fold(
+        getUserForm(asID(c.email)).bindFromRequest.fold(
           errors => { println(errors); Ok("TODO -- handleRegistration -- ERRORS") },
           user => {
             /*

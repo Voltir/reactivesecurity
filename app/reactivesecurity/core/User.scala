@@ -16,6 +16,10 @@ object User {
     val authenticationInfo: PasswordInfo
   }
 
+  trait AsID[USER <: UsingID] {
+    def apply(idStr: String): USER#ID
+  }
+
   trait UserProvider[+USER] {
     def user: USER
   }
@@ -23,15 +27,18 @@ object User {
   trait UserService[USER <: UsingID] {
     def find(id: USER#ID)(implicit ec: ExecutionContext): Future[Validation[UserServiceFailure, USER]]
     def save(user: USER): Unit
+    //def asID(inp: String): USER#ID
   }
 
   trait CredentialValidator[USER <: UsingID, CRED] {
     def validate(user: USER, credential: CRED): Validation[AuthenticationFailure,USER]
   }
 
+  /*
   trait RequiresUsers[USER <: UsingID] {
     val users: UserService[USER]
     def str2ID(inp: String): USER#ID
   }
+  */
 
 }

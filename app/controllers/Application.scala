@@ -9,12 +9,16 @@ import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.templates.Html
 
-import reactivesecurity.core.PasswordInfo
 import reactivesecurity.core.Authentication.AuthenticationFailureHandler
 import reactivesecurity.core.std.AuthenticationFailure
-import reactivesecurity.core.User.{RequiresUsers, UsingID}
+import reactivesecurity.core.User.UsingID
 import reactivesecurity.controllers.LoginForms._
-import reactivesecurity.defaults.{DefaultUserPasswordProvider, InMemoryUserService, DefaultInputValidator, DefaultHashValidator}
+import reactivesecurity.defaults._
+import play.api.mvc.Call
+import reactivesecurity.core.PasswordInfo
+
+//import controllers.DemoUser
+import scala.Some
 
 
 case class DemoUser(id: String, authenticationInfo: PasswordInfo) extends UsingID {
@@ -29,6 +33,11 @@ object TodoAuthFailueHandler extends Controller with AuthenticationFailureHandle
 
 object InMemoryDemoUsers extends InMemoryUserService[DemoUser]
 
+object AsID extends reactivesecurity.core.User.AsID[DemoUser] {
+  def apply(idStr: String) = idStr
+}
+
+/*
 trait DemoUsers extends RequiresUsers[DemoUser] {
   //TODO -- Shoot feet here... an InMemoryUserService must be a singleton or it will initilize multiple instances :/
   //what to do, what to do... cant really adopt the same solution that SecureSocial does, as I want to paramterize
@@ -36,9 +45,13 @@ trait DemoUsers extends RequiresUsers[DemoUser] {
   override val users = InMemoryDemoUsers
   override def str2ID(inp: String) = inp
 }
+*/
+class DemoAuthentication extends DefaultAuthentication[DemoUser](InMemoryDemoUsers) {
+  override val asID = AsID
+}
 
 trait DemoSecured extends Controller with reactivesecurity.core.AsyncSecured[AnyContent,DemoUser] {
-  override val inputValidator = new DefaultInputValidator[DemoUser] with DemoUsers
+  override val inputValidator = new DemoAuthentication
   override val authFailureHandler = TodoAuthFailueHandler
 }
 
@@ -55,10 +68,14 @@ object Application extends DemoSecured {
 }
 
 object DemoProviders extends reactivesecurity.defaults.DefaultProviders[DemoUser] {
-  override val userPasswordProvider = new DefaultUserPasswordProvider[DemoUser] with DemoUsers
+  override val userPasswordProvider = new DefaultUserPasswordProvider[DemoUser](InMemoryDemoUsers)
+  override val asID = AsID
 }
 
-object DemoLogin extends reactivesecurity.defaults.DefaultLogin[DemoUser] with DemoUsers {
+object DemoLogin extends reactivesecurity.defaults.DefaultLogin[DemoUser] {//with DemoUsers {
+  override val users = InMemoryDemoUsers
+  override val asID = AsID
+
   val todo_make_better = new DefaultHashValidator[DemoUser]
 
   def getLoginPage(request: RequestHeader): Html =

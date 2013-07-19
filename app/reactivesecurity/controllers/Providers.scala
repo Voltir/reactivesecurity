@@ -4,7 +4,7 @@ import play.api.mvc._
 import play.api.Logger
 
 import reactivesecurity.core.providers.{UserPasswordProvider,IdPass}
-import reactivesecurity.core.User.{RequiresUsers, UsingID}
+import reactivesecurity.core.User.{AsID, UsingID}
 import reactivesecurity.core.std.AuthenticationServiceFailure
 import reactivesecurity.core.{LoginHandler, Authenticator}
 
@@ -17,6 +17,7 @@ import scalaz.{Failure,Success}
 abstract class Providers[USER <: UsingID] extends Controller {
   val userPasswordProvider: UserPasswordProvider[USER]
   val authenticator: Authenticator
+  val asID: AsID[USER]
 
   def toUrl(implicit request: RequestHeader) = session.get(LoginHandler.OriginalUrlKey).getOrElse(LoginHandler.landingUrl)
 
@@ -49,7 +50,7 @@ abstract class Providers[USER <: UsingID] extends Controller {
     val resultPromise = LoginForms.loginForm.bindFromRequest().fold(
       errors => future { Ok("Errors") },
       { case (id: String, password: String) => {
-        val credentials = IdPass(userPasswordProvider.str2ID(id),password)
+        val credentials = IdPass(asID(id),password)
         userPasswordProvider.authenticate(credentials).map { result =>
           result match {
             case Failure(AuthenticationServiceFailure(f)) => Ok(f.toString)

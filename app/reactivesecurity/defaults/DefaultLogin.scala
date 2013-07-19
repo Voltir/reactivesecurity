@@ -8,11 +8,12 @@ import reactivesecurity.core.providers.UserPasswordProvider
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
-import reactivesecurity.core.User.UsingID
+import reactivesecurity.core.User.{UserService, UsingID}
 
 
 
 abstract class DefaultLogin[USER <: UsingID] extends Login[USER] {
+  override val users: UserService[USER]
   override val confirmationTokenService = InMemoryConfirmationTokenService
 }
 
