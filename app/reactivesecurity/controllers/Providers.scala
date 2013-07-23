@@ -46,7 +46,6 @@ abstract class Providers[USER <: UsingID] extends Controller {
       case _ => NotFound
     }
     */
-    println("AAAAAAAAAAAAAA authenticate -> handleAuth")
     val resultPromise = LoginForms.loginForm.bindFromRequest().fold(
       errors => future { Ok("Errors") },
       { case (id: String, password: String) => {

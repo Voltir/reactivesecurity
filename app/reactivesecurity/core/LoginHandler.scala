@@ -9,14 +9,15 @@ import play.api.data.Form
 trait LoginHandler[USER <: UsingID] {
   def getLoginPage(request: RequestHeader): Html
   def getRegistrationStartPage(request: RequestHeader): Html
-  def getRegistrationPage(request: RequestHeader, confirmation: String): Html
+  def getRegistrationPage(request: RequestHeader, confirmation: String, registrationForm: Form[USER]): Html
 
   def registrationStartRedirect: Call
   def registrationAfterRedirect: Call
   def registrationDoneRedirect: Call
 
-  def userForm: Form[USER]
+  def getUserForm(id: USER#ID): Form[USER]
 }
+
 
 object LoginHandler {
 
@@ -26,5 +27,5 @@ object LoginHandler {
     Play.current.configuration.getString("application.context").getOrElse("/"))
 
   val OriginalUrlKey = "original-url"
-
 }
+

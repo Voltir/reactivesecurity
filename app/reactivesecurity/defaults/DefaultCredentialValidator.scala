@@ -12,13 +12,11 @@ class AlwaysValid[USER <: UsingID] extends CredentialValidator[USER, IdPass[USER
 }
 
 trait HashValidator[USER <: UsingID] extends CredentialValidator[USER,IdPass[USER]] {
+
   val hasher: PasswordHasher
+
   override def validate(user: USER, credential: IdPass[USER]): Validation[AuthenticationFailure,USER] = {
     if(hasher.matches(user.authenticationInfo,credential.password)) Success(user)
     else Failure(InvalidPassword())
   }
-}
-
-class DefaultHashValidator[USER <: UsingID] extends HashValidator[USER] {
-  override val hasher = BCryptHasher
 }

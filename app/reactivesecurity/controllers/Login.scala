@@ -45,9 +45,11 @@ trait ConfirmationTokenService {
 
 abstract class Login[USER <: UsingID] extends Controller {
   val users: UserService[USER]
-  val confirmationTokenService: ConfirmationTokenService
   val asID: AsID[USER]
+  val loginHandler: LoginHandler[USER]
+  val confirmationTokenService: ConfirmationTokenService
 
+  /*
   def getLoginPage(request: RequestHeader): Html
   def getRegistrationStartPage(request: RequestHeader): Html
   def getRegistrationPage(request: RequestHeader, confirmation: String, registrationForm: Form[USER]): Html
@@ -57,6 +59,7 @@ abstract class Login[USER <: UsingID] extends Controller {
   def registrationDoneRedirect: Call
 
   def getUserForm(id: USER#ID): Form[USER]
+  */
 
   def login = Action { implicit request =>
     /*
@@ -73,17 +76,17 @@ abstract class Login[USER <: UsingID] extends Controller {
     }
     */
 
-    withRefererAsOriginalUrl(Ok(getLoginPage(request)))
+    withRefererAsOriginalUrl(Ok(loginHandler.getLoginPage(request)))
   }
 
   def startRegistration = Action { implicit request =>
-    withRefererAsOriginalUrl(Ok(getRegistrationStartPage(request)))
+    withRefererAsOriginalUrl(Ok(loginHandler.getRegistrationStartPage(request)))
   }
 
   def handleStartRegistration = Action { implicit request =>
     Async {
       LoginForms.registrationForm.bindFromRequest.fold(
-        errors => future { println("TODO REGISTRATION: "+errors); BadRequest(getRegistrationStartPage(request)) },
+        errors => future { println("TODO REGISTRATION: "+errors); BadRequest(loginHandler.getRegistrationStartPage(request)) },
         { case (email,pass) =>
           val id = asID(email)
           users.find(id).map { validation =>
@@ -93,7 +96,7 @@ abstract class Login[USER <: UsingID] extends Controller {
               val token = confirmationTokenService.createAndSaveToken(email,true)
               println("Send to email:" + token)
             }
-            Redirect(registrationAfterRedirect).flashing("success" -> Messages("ThankYouCheckEmail"), "email" -> email)
+            Redirect(loginHandler.registrationAfterRedirect).flashing("success" -> Messages("ThankYouCheckEmail"), "email" -> email)
           }
         }
       )
@@ -106,7 +109,7 @@ abstract class Login[USER <: UsingID] extends Controller {
         f(t)
       }
       case _ => {
-        Redirect(registrationStartRedirect).flashing("error" -> Messages("TODO Something about ConfirmationToken"))
+        Redirect(loginHandler.registrationStartRedirect).flashing("error" -> Messages("TODO Something about ConfirmationToken"))
       }
     }
   }
@@ -114,7 +117,7 @@ abstract class Login[USER <: UsingID] extends Controller {
   def registration(confirmation: String) = Action { implicit request =>
     Async {
       executeForToken(confirmation, true, { c =>
-         Ok(getRegistrationPage(request,confirmation,getUserForm(asID(c.email))))
+         Ok(loginHandler.getRegistrationPage(request,confirmation,loginHandler.getUserForm(asID(c.email))))
       })
     }
   }
@@ -122,7 +125,7 @@ abstract class Login[USER <: UsingID] extends Controller {
   def handleRegistration(confirmation: String) =  Action { implicit request =>
     Async {
       executeForToken(confirmation, true, { c =>
-        getUserForm(asID(c.email)).bindFromRequest.fold(
+        loginHandler.getUserForm(asID(c.email)).bindFromRequest.fold(
           errors => { println(errors); Ok("TODO -- handleRegistration -- ERRORS") },
           user => {
             /*
@@ -141,7 +144,7 @@ abstract class Login[USER <: UsingID] extends Controller {
             users.save(user)
             //TODO Mailer
             confirmationTokenService.delete(confirmation)
-            Redirect(registrationDoneRedirect).flashing("success" -> Messages("reactivesecurity.registrationDone"))
+            Redirect(loginHandler.registrationDoneRedirect).flashing("success" -> Messages("reactivesecurity.registrationDone"))
           }
         )
       })
