@@ -1,11 +1,12 @@
 package reactivesecurity.core
 
 import play.api.Play
-import play.api.mvc.{Call, RequestHeader}
-import play.api.templates.Html
-import reactivesecurity.core.User.UsingID
-import play.api.data.Form
+import play.api.mvc._
 
+import reactivesecurity.core.User.UsingID
+
+
+/*
 trait LoginHandler[USER <: UsingID] {
   def getLoginPage(request: RequestHeader): Html
   def getRegistrationStartPage(request: RequestHeader): Html
@@ -16,6 +17,18 @@ trait LoginHandler[USER <: UsingID] {
   def registrationDoneRedirect: Call
 
   def getUserForm(id: USER#ID): Form[USER]
+}
+*/
+trait LoginHandler[USER <: UsingID] {
+  def onUnauthorized(request: RequestHeader): Result
+  def onLoginSucceeded(request: RequestHeader): PlainResult
+  def onLogoutSucceeded(request: RequestHeader): PlainResult
+  def onLogin(request: RequestHeader): Result
+
+  def onStartSignUp(request: RequestHeader, error: Option[String]): Result
+  def onFinishSignUp(request: RequestHeader): Result
+  def onStartCompleteRegistration(request: RequestHeader, confirmation: String, id: USER#ID): Result
+  def onCompleteRegistration[A](id: USER#ID)(store: USER => Unit)(implicit request: Request[A]): Result
 }
 
 

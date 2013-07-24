@@ -43,7 +43,7 @@ trait ConfirmationTokenService {
   def delete(uuid: String): Unit
 }
 
-abstract class Login[USER <: UsingID] extends Controller {
+trait Login[USER <: UsingID] extends Controller {
   val users: UserService[USER]
   val asID: AsID[USER]
   val loginHandler: LoginHandler[USER]
@@ -76,17 +76,19 @@ abstract class Login[USER <: UsingID] extends Controller {
     }
     */
 
-    withRefererAsOriginalUrl(Ok(loginHandler.getLoginPage(request)))
+    //withRefererAsOriginalUrl(Ok(loginHandler.getLoginPage(request)))
+    withRefererAsOriginalUrl(loginHandler.onLogin(request))
   }
 
   def startRegistration = Action { implicit request =>
-    withRefererAsOriginalUrl(Ok(loginHandler.getRegistrationStartPage(request)))
+    //withRefererAsOriginalUrl(Ok(loginHandler.getRegistrationStartPage(request)))
+    withRefererAsOriginalUrl(loginHandler.onStartSignUp(request,None))
   }
 
   def handleStartRegistration = Action { implicit request =>
     Async {
       LoginForms.registrationForm.bindFromRequest.fold(
-        errors => future { println("TODO REGISTRATION: "+errors); BadRequest(loginHandler.getRegistrationStartPage(request)) },
+        errors => future { println("TODO REGISTRATION: "+errors); loginHandler.onStartSignUp(request,None) },
         { case (email,pass) =>
           val id = asID(email)
           users.find(id).map { validation =>
@@ -94,40 +96,48 @@ abstract class Login[USER <: UsingID] extends Controller {
               println("Send already registered email")
             }.getOrElse {
               val token = confirmationTokenService.createAndSaveToken(email,true)
-              println("Send to email:" + token)
+              println("Send to email: " + token)
             }
-            Redirect(loginHandler.registrationAfterRedirect).flashing("success" -> Messages("ThankYouCheckEmail"), "email" -> email)
+            //Redirect(loginHandler.registrationAfterRedirect).flashing("success" -> Messages("ThankYouCheckEmail"), "email" -> email)
+            loginHandler.onFinishSignUp(request)
           }
         }
       )
     }
   }
 
-  def executeForToken(confirmation: String, isSignUp: Boolean, f: ConfirmationToken => Result): Future[Result] = future {
+  def executeForToken[A](confirmation: String, isSignUp: Boolean, f: ConfirmationToken => Result)(implicit request: Request[A]): Future[Result] = future {
     confirmationTokenService.find(confirmation) match {
       case Some(t) if !t.isExpired && t.isSignUp == isSignUp => {
         f(t)
       }
       case _ => {
-        Redirect(loginHandler.registrationStartRedirect).flashing("error" -> Messages("TODO Something about ConfirmationToken"))
+        ///Redirect(loginHandler.registrationStartRedirect).flashing("error" -> Messages("TODO Something about ConfirmationToken"))
+        loginHandler.onStartSignUp(request,Some("TODO Something about ConfirmationToken"))
       }
     }
   }
 
+
   def registration(confirmation: String) = Action { implicit request =>
     Async {
       executeForToken(confirmation, true, { c =>
-         Ok(loginHandler.getRegistrationPage(request,confirmation,loginHandler.getUserForm(asID(c.email))))
+         ///Ok(loginHandler.getRegistrationPage(request,confirmation,loginHandler.getUserForm(asID(c.email))))
+        loginHandler.onStartCompleteRegistration(request,confirmation,asID(c.email))
       })
     }
   }
 
+
   def handleRegistration(confirmation: String) =  Action { implicit request =>
+    println("WATTTT???: "+request)
+    println("WATTTT???: "+request.body)
     Async {
       executeForToken(confirmation, true, { c =>
-        loginHandler.getUserForm(asID(c.email)).bindFromRequest.fold(
-          errors => { println(errors); Ok("TODO -- handleRegistration -- ERRORS") },
-          user => {
+
+        ///loginHandler.getUserForm(asID(c.email)).bindFromRequest.fold(
+        ///  errors => { println(errors); Ok("TODO -- handleRegistration -- ERRORS") },
+        ///  user => {
             /*
             val saved = UserService.save(user)
             UserService.deleteToken(t.uuid)
@@ -141,12 +151,18 @@ abstract class Login[USER <: UsingID] extends Controller {
               Redirect(onHandleSignUpGoTo).flashing(Success -> Messages(SignUpDone)).withSession(eventSession)
             }
             */
-            users.save(user)
-            //TODO Mailer
-            confirmationTokenService.delete(confirmation)
-            Redirect(loginHandler.registrationDoneRedirect).flashing("success" -> Messages("reactivesecurity.registrationDone"))
-          }
-        )
+        ///    users.save(user)
+        ///    //TODO Mailer
+        ///    confirmationTokenService.delete(confirmation)
+        ///    Redirect(loginHandler.registrationDoneRedirect).flashing("success" -> Messages("reactivesecurity.registrationDone"))
+        ///  }
+        ///)
+        //TODO: Rename "c.email" to something more ID like
+        confirmationTokenService.delete(confirmation)
+        println("WATTTT???: "+request.body)
+        println("?????????: " + request.queryString)
+        loginHandler.onCompleteRegistration(asID(c.email)) { user: USER => users.save(user) }(request) //TODO - Send Mail
+        //Ok("Wat")
       })
     }
   }
