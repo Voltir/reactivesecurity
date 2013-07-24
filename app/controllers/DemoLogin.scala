@@ -10,9 +10,6 @@ import play.api.data.Forms._
 
 import reactivesecurity.defaults.{BCryptUserPasswordProvider, InMemoryUserService, BCryptHasher}
 import play.api.i18n.Messages
-import reactivesecurity.core.LoginHandler
-
-import scala.Some
 
 object InMemoryDemoUsers extends InMemoryUserService[DemoUser]
 
@@ -20,7 +17,16 @@ object AsID extends reactivesecurity.core.User.AsID[DemoUser] {
   def apply(idStr: String) = idStr
 }
 
-object DemoLoginHandler extends LoginHandler[DemoUser] {
+
+object DemoProviders extends reactivesecurity.defaults.DefaultProviders[DemoUser] {
+  override val userPasswordProvider = new BCryptUserPasswordProvider[DemoUser](InMemoryDemoUsers)
+  override val asID = AsID
+}
+
+object DemoLogin extends reactivesecurity.defaults.DefaultLogin[DemoUser] {
+  override val users = InMemoryDemoUsers
+  override val asID = AsID
+
   def onUnauthorized(request: RequestHeader): Result = Redirect(routes.DemoLogin.login)
   def onLoginSucceeded(request: RequestHeader): PlainResult = Redirect(routes.Application.foo)
   def onLogoutSucceeded(request: RequestHeader): PlainResult = Redirect(routes.DemoLogin.login)
@@ -37,33 +43,21 @@ object DemoLoginHandler extends LoginHandler[DemoUser] {
   def onStartCompleteRegistration(request: RequestHeader, confirmation: String, id: String): Result =
     Ok(views.html.finishRegistration(getUserForm(id),confirmation)(request))
 
-  def onCompleteRegistration[A](id: String)(store: DemoUser => Unit)(implicit request: Request[A]): Result = {
+  def onCompleteRegistration[A](id: String)(implicit request: Request[A]): (Option[DemoUser],Result) = {
     getUserForm(id).bindFromRequest().fold(
-      errors => { println(errors); Ok("1") },
-      user =>  { store(user) ; Ok("2") }
+      errors => { println(errors); (None,Ok("1")) },
+      user =>  {  (Some(user),Ok("2")) }
     )
   }
 
   def getUserForm(id: String) = { Form[DemoUser](
     mapping(
       "name" -> nonEmptyText,
-      ("password" ->
+      "password" ->
         tuple(
           "password1" -> nonEmptyText,
           "password2" -> nonEmptyText
         ).verifying(Messages("passwords.dont.match"), passwords => passwords._1 == passwords._2)
-        )
     )((name, password) => DemoUser(id,BCryptHasher.hash(password._1)))(user => Some(user.id,("","")))
   )}
-}
-
-object DemoProviders extends reactivesecurity.defaults.DefaultProviders[DemoUser] {
-  override val userPasswordProvider = new BCryptUserPasswordProvider[DemoUser](InMemoryDemoUsers)
-  override val asID = AsID
-}
-
-object DemoLogin extends reactivesecurity.defaults.DefaultLogin[DemoUser] {
-  override val users = InMemoryDemoUsers
-  override val asID = AsID
-  override val loginHandler = DemoLoginHandler
 }

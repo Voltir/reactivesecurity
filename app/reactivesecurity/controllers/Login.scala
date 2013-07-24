@@ -46,20 +46,17 @@ trait ConfirmationTokenService {
 trait Login[USER <: UsingID] extends Controller {
   val users: UserService[USER]
   val asID: AsID[USER]
-  val loginHandler: LoginHandler[USER]
   val confirmationTokenService: ConfirmationTokenService
 
-  /*
-  def getLoginPage(request: RequestHeader): Html
-  def getRegistrationStartPage(request: RequestHeader): Html
-  def getRegistrationPage(request: RequestHeader, confirmation: String, registrationForm: Form[USER]): Html
+  def onUnauthorized(request: RequestHeader): Result
+  def onLoginSucceeded(request: RequestHeader): PlainResult
+  def onLogoutSucceeded(request: RequestHeader): PlainResult
+  def onLogin(request: RequestHeader): Result
 
-  def registrationStartRedirect: Call
-  def registrationAfterRedirect: Call
-  def registrationDoneRedirect: Call
-
-  def getUserForm(id: USER#ID): Form[USER]
-  */
+  def onStartSignUp(request: RequestHeader, error: Option[String]): Result
+  def onFinishSignUp(request: RequestHeader): Result
+  def onStartCompleteRegistration(request: RequestHeader, confirmation: String, id: USER#ID): Result
+  def onCompleteRegistration[A](id: USER#ID)(implicit request: Request[A]): (Option[USER],Result)
 
   def login = Action { implicit request =>
     /*
@@ -76,19 +73,18 @@ trait Login[USER <: UsingID] extends Controller {
     }
     */
 
-    //withRefererAsOriginalUrl(Ok(loginHandler.getLoginPage(request)))
-    withRefererAsOriginalUrl(loginHandler.onLogin(request))
+    withRefererAsOriginalUrl(onLogin(request))
   }
 
   def startRegistration = Action { implicit request =>
     //withRefererAsOriginalUrl(Ok(loginHandler.getRegistrationStartPage(request)))
-    withRefererAsOriginalUrl(loginHandler.onStartSignUp(request,None))
+    withRefererAsOriginalUrl(onStartSignUp(request,None))
   }
 
   def handleStartRegistration = Action { implicit request =>
     Async {
       LoginForms.registrationForm.bindFromRequest.fold(
-        errors => future { println("TODO REGISTRATION: "+errors); loginHandler.onStartSignUp(request,None) },
+        errors => future { println("TODO REGISTRATION: "+errors); onStartSignUp(request,None) },
         { case (email,pass) =>
           val id = asID(email)
           users.find(id).map { validation =>
@@ -99,7 +95,7 @@ trait Login[USER <: UsingID] extends Controller {
               println("Send to email: " + token)
             }
             //Redirect(loginHandler.registrationAfterRedirect).flashing("success" -> Messages("ThankYouCheckEmail"), "email" -> email)
-            loginHandler.onFinishSignUp(request)
+            onFinishSignUp(request)
           }
         }
       )
@@ -113,7 +109,7 @@ trait Login[USER <: UsingID] extends Controller {
       }
       case _ => {
         ///Redirect(loginHandler.registrationStartRedirect).flashing("error" -> Messages("TODO Something about ConfirmationToken"))
-        loginHandler.onStartSignUp(request,Some("TODO Something about ConfirmationToken"))
+        onStartSignUp(request,Some("TODO Something about ConfirmationToken"))
       }
     }
   }
@@ -123,15 +119,13 @@ trait Login[USER <: UsingID] extends Controller {
     Async {
       executeForToken(confirmation, true, { c =>
          ///Ok(loginHandler.getRegistrationPage(request,confirmation,loginHandler.getUserForm(asID(c.email))))
-        loginHandler.onStartCompleteRegistration(request,confirmation,asID(c.email))
+        onStartCompleteRegistration(request,confirmation,asID(c.email))
       })
     }
   }
 
 
   def handleRegistration(confirmation: String) =  Action { implicit request =>
-    println("WATTTT???: "+request)
-    println("WATTTT???: "+request.body)
     Async {
       executeForToken(confirmation, true, { c =>
 
@@ -159,10 +153,9 @@ trait Login[USER <: UsingID] extends Controller {
         ///)
         //TODO: Rename "c.email" to something more ID like
         confirmationTokenService.delete(confirmation)
-        println("WATTTT???: "+request.body)
-        println("?????????: " + request.queryString)
-        loginHandler.onCompleteRegistration(asID(c.email)) { user: USER => users.save(user) }(request) //TODO - Send Mail
-        //Ok("Wat")
+        val result = onCompleteRegistration(asID(c.email))(request) //TODO - Send Mail
+        result._1.map(users.save(_))
+        result._2
       })
     }
   }

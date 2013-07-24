@@ -19,6 +19,7 @@ trait LoginHandler[USER <: UsingID] {
   def getUserForm(id: USER#ID): Form[USER]
 }
 */
+/*
 trait LoginHandler[USER <: UsingID] {
   def onUnauthorized(request: RequestHeader): Result
   def onLoginSucceeded(request: RequestHeader): PlainResult
@@ -30,7 +31,7 @@ trait LoginHandler[USER <: UsingID] {
   def onStartCompleteRegistration(request: RequestHeader, confirmation: String, id: USER#ID): Result
   def onCompleteRegistration[A](id: USER#ID)(store: USER => Unit)(implicit request: Request[A]): Result
 }
-
+*/
 
 object LoginHandler {
 
