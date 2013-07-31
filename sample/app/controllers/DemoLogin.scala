@@ -43,10 +43,10 @@ object DemoLogin extends reactivesecurity.defaults.DefaultLogin[DemoUser] {
   def onStartCompleteRegistration(request: RequestHeader, confirmation: String, id: String): Result =
     Ok(views.html.finishRegistration(getUserForm(id),confirmation)(request))
 
-  def onCompleteRegistration[A](id: String)(implicit request: Request[A]): (Option[DemoUser],Result) = {
+  def onCompleteRegistration[A](confirmation: String, id: String)(implicit request: Request[A]): (Option[DemoUser],Result) = {
     getUserForm(id).bindFromRequest().fold(
-      errors => { println(errors); (None,Ok("1")) },
-      user =>  {  (Some(user),Ok("2")) }
+      errors => (None,Ok(views.html.finishRegistration(errors,confirmation))),
+      user =>  (Some(user),Ok("2"))
     )
   }
 

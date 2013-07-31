@@ -56,7 +56,7 @@ trait Login[USER <: UsingID] extends Controller {
   def onStartSignUp(request: RequestHeader, error: Option[String]): Result
   def onFinishSignUp(request: RequestHeader): Result
   def onStartCompleteRegistration(request: RequestHeader, confirmation: String, id: USER#ID): Result
-  def onCompleteRegistration[A](id: USER#ID)(implicit request: Request[A]): (Option[USER],Result)
+  def onCompleteRegistration[A](confirmation: String, id: USER#ID)(implicit request: Request[A]): (Option[USER],Result)
 
   def login = Action { implicit request =>
     /*
@@ -152,9 +152,11 @@ trait Login[USER <: UsingID] extends Controller {
         ///  }
         ///)
         //TODO: Rename "c.email" to something more ID like
-        confirmationTokenService.delete(confirmation)
-        val result = onCompleteRegistration(asID(c.email))(request) //TODO - Send Mail
-        result._1.map(users.save(_))
+        val result = onCompleteRegistration(confirmation,asID(c.email))(request) //TODO - Send Mail
+        result._1.map {
+          confirmationTokenService.delete(confirmation)
+          users.save(_)
+        }
         result._2
       })
     }
