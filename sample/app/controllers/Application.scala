@@ -4,24 +4,15 @@ package controllers
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import play.api.mvc._
-import play.api.data.Form
-import play.api.data.Forms._
-import play.api.i18n.Messages
-import play.api.templates.Html
 
 import reactivesecurity.core.Authentication.AuthenticationFailureHandler
 import reactivesecurity.core.std.AuthenticationFailure
 import reactivesecurity.core.User.UsingID
-import reactivesecurity.controllers.LoginForms._
 import reactivesecurity.defaults._
-import play.api.mvc.Call
-import reactivesecurity.core.PasswordInfo
-
-//import controllers.DemoUser
-import scala.Some
 
 
-case class DemoUser(id: String, authenticationInfo: PasswordInfo) extends UsingID {
+
+case class DemoUser(id: String) extends UsingID {
   type ID = String
 }
 

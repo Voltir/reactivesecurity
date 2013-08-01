@@ -17,7 +17,10 @@ object ApplicationBuild extends Build {
     resolvers ++= Seq(
       "jBCrypt Repository" at "http://repo1.maven.org/maven2/org/",
       "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
-    )
+    ),
+    publishTo := Some(Resolver.file(
+      "Github Pages", new File("/home/jobhive/publish/reactivesecurity"))
+    ) 
   )
 
 }

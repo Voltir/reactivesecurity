@@ -1,30 +1,33 @@
 package controllers
 
 import play.api.mvc._
-import play.api.mvc.Results._
-import play.api.templates.Html
 import reactivesecurity.controllers.LoginForms._
 
 import play.api.data.Form
 import play.api.data.Forms._
 
-import reactivesecurity.defaults.{BCryptUserPasswordProvider, InMemoryUserService, BCryptHasher}
+import reactivesecurity.defaults.InMemoryUserService
 import play.api.i18n.Messages
+import defaults.InMemoryPasswordService //TODO Argh.. should be prefixed reactivesecurity
+
+import reactivesecurity.core.providers.UserPasswordProvider
 
 object InMemoryDemoUsers extends InMemoryUserService[DemoUser]
+
+object InMemoryDemoPasswords extends InMemoryPasswordService[DemoUser]
 
 object AsID extends reactivesecurity.core.User.AsID[DemoUser] {
   def apply(idStr: String) = idStr
 }
 
-
 object DemoProviders extends reactivesecurity.defaults.DefaultProviders[DemoUser] {
-  override val userPasswordProvider = new BCryptUserPasswordProvider[DemoUser](InMemoryDemoUsers)
+  override val userPasswordProvider = new UserPasswordProvider[DemoUser](InMemoryDemoUsers,InMemoryDemoPasswords)
   override val asID = AsID
 }
 
 object DemoLogin extends reactivesecurity.defaults.DefaultLogin[DemoUser] {
-  override val users = InMemoryDemoUsers
+  override val userService = InMemoryDemoUsers
+  override val passwordService = InMemoryDemoPasswords
   override val asID = AsID
 
   def onUnauthorized(request: RequestHeader): Result = Redirect(routes.DemoLogin.login)
@@ -58,6 +61,6 @@ object DemoLogin extends reactivesecurity.defaults.DefaultLogin[DemoUser] {
           "password1" -> nonEmptyText,
           "password2" -> nonEmptyText
         ).verifying(Messages("passwords.dont.match"), passwords => passwords._1 == passwords._2)
-    )((name, password) => DemoUser(id,BCryptHasher.hash(password._1)))(user => Some(user.id,("","")))
+    )((name, password) => DemoUser(id))(user => Some(user.id,("","")))
   )}
 }

@@ -1,18 +1,13 @@
 package reactivesecurity.defaults
 
 import java.security.SecureRandom
-
 import scalaz._
-import scalaz.Scalaz._
 
 import play.api.libs.Codecs
 import play.api.cache.Cache
 import play.api.Play.current
 
-
-
 import reactivesecurity.core.{AuthenticatorToken, AuthenticatorStore, CookieIdGenerator, Authenticator}
-import play.api.mvc.RequestHeader
 
 object DefaultCookieIdGenerator extends CookieIdGenerator {
   val random = new SecureRandom()
@@ -30,9 +25,7 @@ object LocalCacheAuthenticationStore extends AuthenticatorStore {
     Cache.set(authenticator.id,authenticator)
     Success(Unit)
   }
-
   def find(id: String): Option[AuthenticatorToken] = Cache.getAs[AuthenticatorToken](id)
-
 }
 
 object DefaultAuthenticator extends Authenticator {

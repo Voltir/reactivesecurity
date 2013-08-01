@@ -1,5 +1,6 @@
 package reactivesecurity.controllers
 
+import reactivesecurity.core.Password.PasswordService
 import scalaz.Scalaz._
 import play.api.mvc._
 import org.joda.time.DateTime
@@ -9,13 +10,12 @@ import scala.concurrent.{Future,future}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import play.api.http.HeaderNames
-import play.api.i18n.Messages
 import play.api.data._
 import play.api.data.Forms._
 
-import reactivesecurity.core.User.{UserService, AsID, UsingID}
-import reactivesecurity.core.LoginHandler
-import play.api.templates.Html
+import reactivesecurity.core.User.{UserService, UsingID}
+import reactivesecurity.core.{Password, LoginHandler}
+import play.api.mvc.Result
 
 case class ConfirmationToken(uuid: String, email: String, creationTime: DateTime, expirationTime: DateTime, isSignUp: Boolean) {
   def isExpired = expirationTime.isBeforeNow
@@ -44,8 +44,8 @@ trait ConfirmationTokenService {
 }
 
 trait Login[USER <: UsingID] extends Controller {
-  val users: UserService[USER]
-  val asID: AsID[USER]
+  val userService: UserService[USER]
+  val passwordService: PasswordService[USER]
   val confirmationTokenService: ConfirmationTokenService
 
   def onUnauthorized(request: RequestHeader): Result
@@ -77,7 +77,6 @@ trait Login[USER <: UsingID] extends Controller {
   }
 
   def startRegistration = Action { implicit request =>
-    //withRefererAsOriginalUrl(Ok(loginHandler.getRegistrationStartPage(request)))
     withRefererAsOriginalUrl(onStartSignUp(request,None))
   }
 
@@ -86,15 +85,17 @@ trait Login[USER <: UsingID] extends Controller {
       LoginForms.registrationForm.bindFromRequest.fold(
         errors => future { println("TODO REGISTRATION: "+errors); onStartSignUp(request,None) },
         { case (email,pass) =>
-          val id = asID(email)
-          users.find(id).map { validation =>
+          val id = userService.idFromEmail(email)
+          userService.find(id).map { validation =>
             validation.map { user =>
               println("Send already registered email")
             }.getOrElse {
               val token = confirmationTokenService.createAndSaveToken(email,true)
+              val passInfo = passwordService.hasher.hash(pass)
+              passwordService.save(id,passInfo)
+              //TODO remember to delete token (+ password if timed out)
               println("Send to email: " + token)
             }
-            //Redirect(loginHandler.registrationAfterRedirect).flashing("success" -> Messages("ThankYouCheckEmail"), "email" -> email)
             onFinishSignUp(request)
           }
         }
@@ -108,7 +109,6 @@ trait Login[USER <: UsingID] extends Controller {
         f(t)
       }
       case _ => {
-        ///Redirect(loginHandler.registrationStartRedirect).flashing("error" -> Messages("TODO Something about ConfirmationToken"))
         onStartSignUp(request,Some("TODO Something about ConfirmationToken"))
       }
     }
@@ -118,8 +118,7 @@ trait Login[USER <: UsingID] extends Controller {
   def registration(confirmation: String) = Action { implicit request =>
     Async {
       executeForToken(confirmation, true, { c =>
-         ///Ok(loginHandler.getRegistrationPage(request,confirmation,loginHandler.getUserForm(asID(c.email))))
-        onStartCompleteRegistration(request,confirmation,asID(c.email))
+        onStartCompleteRegistration(request,confirmation,userService.idFromEmail(c.email))
       })
     }
   }
@@ -152,12 +151,12 @@ trait Login[USER <: UsingID] extends Controller {
         ///  }
         ///)
         //TODO: Rename "c.email" to something more ID like
-        val result = onCompleteRegistration(confirmation,asID(c.email))(request) //TODO - Send Mail
-        result._1.map {
+        val (userMaybe,result)  = onCompleteRegistration(confirmation,userService.idFromEmail(c.email))(request) //TODO - Send Mail
+        userMaybe.map {
           confirmationTokenService.delete(confirmation)
-          users.save(_)
+          userService.save(_)
         }
-        result._2
+        result
       })
     }
   }

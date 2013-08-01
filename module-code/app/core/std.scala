@@ -1,12 +1,10 @@
 package reactivesecurity.core
 
-import reactivesecurity.core.User.{AsID, UserService, UsingID}
+import reactivesecurity.core.User.{UserService, UsingID}
 import scalaz.{Failure,Validation}
 import reactivesecurity.core.Authentication.AsyncInputValidator
 import scala.concurrent.{ExecutionContext, future, Future}
-import play.api.mvc.{AnyContent, Request, RequestHeader}
-import play.api.data.Form
-import play.api.data.Forms._
+import play.api.mvc.{AnyContent, Request}
 import scalaz.Failure
 
 object std {
@@ -22,16 +20,16 @@ object std {
 
   case class InvalidPassword() extends AuthenticationFailure
 
+  case class CredentialsNotFound() extends AuthenticationFailure
 
   abstract class AuthenticatedInputValidator[USER <: UsingID] extends AsyncInputValidator[Request[AnyContent],USER,AuthenticationFailure] {
     val users: UserService[USER]
-    val authenticator: reactivesecurity.core.Authenticator
-    val asID: AsID[USER]
+    val authenticator: Authenticator
 
     override def validateInput(in: Request[AnyContent])(implicit ec: ExecutionContext): Future[Validation[UserServiceFailure,USER]] = {
       authenticator.find(in).map(
-        token => users.find(asID(token.uid))
-      ).getOrElse(future { Failure[UserServiceFailure,USER](ValidationFailure().asInstanceOf[UserServiceFailure]) } )
+        token => users.find(users.idFromEmail(token.uid))
+      ).getOrElse(future { Failure[UserServiceFailure,USER](ValidationFailure()) } )
     }
   }
 }

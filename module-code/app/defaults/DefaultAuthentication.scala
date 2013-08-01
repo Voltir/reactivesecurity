@@ -1,9 +1,8 @@
 package reactivesecurity.defaults
 
 import reactivesecurity.core.std.AuthenticatedInputValidator
-import reactivesecurity.core.User.{AsID, UserService, UsingID}
+import reactivesecurity.core.User.{UserService, UsingID}
 
-abstract class DefaultAuthentication[USER <: UsingID](val users: UserService[USER]) extends AuthenticatedInputValidator[USER] { //with RequiresUsers[USER] {
-  override val asID: AsID[USER]
+abstract class DefaultAuthentication[USER <: UsingID](val users: UserService[USER]) extends AuthenticatedInputValidator[USER] {
   override val authenticator = DefaultAuthenticator
 }

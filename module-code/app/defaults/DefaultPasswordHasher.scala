@@ -1,8 +1,9 @@
 package reactivesecurity.defaults
 
-import reactivesecurity.core.{PasswordInfo, PasswordHasher}
 import play.api.Play
 import org.mindrot.jbcrypt.BCrypt
+
+import reactivesecurity.core.Password._
 
 object BCryptHasher extends PasswordHasher {
   val roundsConfKey = "reactivesecurity.passwordHasher.bcrypt.rounds"
@@ -14,7 +15,6 @@ object BCryptHasher extends PasswordHasher {
   }
 
   override def matches(passwordInfo: PasswordInfo, supplied: String): Boolean = {
-    println("Bcrypt supplied: "+supplied)
     BCrypt.checkpw(supplied, passwordInfo.password)
   }
 }
