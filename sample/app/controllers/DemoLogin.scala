@@ -12,23 +12,21 @@ import defaults.InMemoryPasswordService //TODO Argh.. should be prefixed reactiv
 
 import reactivesecurity.core.providers.UserPasswordProvider
 
-object InMemoryDemoUsers extends InMemoryUserService[DemoUser]
+trait DemoAsID extends reactivesecurity.core.User.StringAsID[DemoUser] {
+  override def strAsId(idStr: String) = idStr
+}
+
+object InMemoryDemoUsers extends InMemoryUserService[DemoUser] with DemoAsID { def idFromEmail(email: String) = email } //Todo
 
 object InMemoryDemoPasswords extends InMemoryPasswordService[DemoUser]
 
-object AsID extends reactivesecurity.core.User.AsID[DemoUser] {
-  def apply(idStr: String) = idStr
-}
-
 object DemoProviders extends reactivesecurity.defaults.DefaultProviders[DemoUser] {
   override val userPasswordProvider = new UserPasswordProvider[DemoUser](InMemoryDemoUsers,InMemoryDemoPasswords)
-  override val asID = AsID
 }
 
 object DemoLogin extends reactivesecurity.defaults.DefaultLogin[DemoUser] {
   override val userService = InMemoryDemoUsers
   override val passwordService = InMemoryDemoPasswords
-  override val asID = AsID
 
   def onUnauthorized(request: RequestHeader): Result = Redirect(routes.DemoLogin.login)
   def onLoginSucceeded(request: RequestHeader): PlainResult = Redirect(routes.Application.foo)

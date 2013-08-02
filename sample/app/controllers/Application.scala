@@ -23,7 +23,7 @@ object TodoAuthFailueHandler extends Controller with AuthenticationFailureHandle
 }
 
 trait DemoSecured extends Controller with reactivesecurity.core.AsyncSecured[AnyContent,DemoUser] {
-  override val inputValidator = new DefaultAuthentication[DemoUser](InMemoryDemoUsers) { override val asID = AsID }
+  override val inputValidator = new DefaultAuthentication[DemoUser](InMemoryDemoUsers) { /*override val asID = AsID*/ }
   override val authFailureHandler = TodoAuthFailueHandler
 }
 
