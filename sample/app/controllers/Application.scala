@@ -1,6 +1,5 @@
 package controllers
 
-
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import play.api.mvc._
@@ -9,7 +8,7 @@ import reactivesecurity.core.Authentication.AuthenticationFailureHandler
 import reactivesecurity.core.std.AuthenticationFailure
 import reactivesecurity.core.User.UsingID
 import reactivesecurity.defaults._
-
+import play.api.templates.Html
 
 
 case class DemoUser(id: String) extends UsingID {
@@ -22,19 +21,23 @@ object TodoAuthFailueHandler extends Controller with AuthenticationFailureHandle
   }
 }
 
-trait DemoSecured extends Controller with reactivesecurity.core.AsyncSecured[AnyContent,DemoUser] {
-  override val inputValidator = new DefaultAuthentication[DemoUser](InMemoryDemoUsers) { /*override val asID = AsID*/ }
+trait DemoSecured extends Controller with reactivesecurity.core.AnyContentAsyncSecured[DemoUser] {
+  override val inputValidator = new DefaultAuthentication[DemoUser](InMemoryDemoUsers) { }
   override val authFailureHandler = TodoAuthFailueHandler
 }
 
 object Application extends DemoSecured {
 
-  def index = AsyncSecuredAction(parse.anyContent) { case (request,user) =>
+  def index = Secured { implicit request => user =>
     Ok(user.id)
   }
 
-  def foo = AsyncSecuredAction(parse.anyContent) { case (request,user) =>
+  def foo = Secured { implicit request => user =>
     Ok("This is secure and you are: "+user.id)
+  }
+
+  def todoDeleteThis = Secured { implicit request => user =>
+    Some(2).fold(BadRequest(Html("???")))(i => Ok(Html("Wat")))
   }
 
 }

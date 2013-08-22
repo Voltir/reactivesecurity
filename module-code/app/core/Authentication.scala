@@ -7,8 +7,8 @@ import reactivesecurity.core.User.UsingID
 
 object Authentication {
 
-  trait AsyncAuthenticationProcess[IN,OUT,USR] {
-    def authentication(action: (IN,USR) => OUT)(implicit ec: ExecutionContext): IN => Future[OUT]
+  trait AsyncAuthenticationProcess[IN,OUT,USER] {
+    def authentication(action: IN => USER => OUT)(implicit ec: ExecutionContext): IN => Future[OUT]
   }
 
 
@@ -24,12 +24,12 @@ object Authentication {
     val inputValidator: AsyncInputValidator[IN,USER,FAILURE]
     val authFailureHandler: AuthenticationFailureHandler[IN,FAILURE,OUT]
 
-    override def authentication(action: (IN,USER) => OUT)(implicit ec: ExecutionContext): IN => Future[OUT] = {
+    override def authentication(action: IN => USER => OUT)(implicit ec: ExecutionContext): IN => Future[OUT] = {
       in: IN => {
         inputValidator.validateInput(in).map { result =>
           result.fold(
             fail = { f => authFailureHandler.onAuthenticationFailure(in,f)  },
-            succ = { user => action(in,user) }
+            succ = { user => action(in)(user) }
           )
         }
       }
