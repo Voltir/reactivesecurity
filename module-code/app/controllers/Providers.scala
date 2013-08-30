@@ -23,7 +23,7 @@ abstract class Providers[USER <: UsingID] extends Controller {
   def authenticate(provider: String) = handleAuth(provider)
   def authenticateByPost(provider: String) = handleAuth(provider)
 
-  private def handleAuth(provider: String) = Action.async { implicit request =>
+  private def handleAuth(provider: String) = Action { implicit request => Async {
     /*
     Registry.providers.get(provider) match {
       case Some(p) => {
@@ -58,9 +58,9 @@ abstract class Providers[USER <: UsingID] extends Controller {
         }
       }}
     )
-  }
+  }}
 
-  def completeAuthentication(user: USER, session: Session)(implicit request: RequestHeader): SimpleResult = {
+  def completeAuthentication(user: USER, session: Session)(implicit request: RequestHeader): Result = {
     if ( Logger.isDebugEnabled ) {
       Logger.debug("[reactivesecurity] user logged in : [" + user + "]")
     }

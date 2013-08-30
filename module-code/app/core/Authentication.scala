@@ -11,7 +11,6 @@ object Authentication {
     def authentication(action: IN => USER => OUT)(implicit ec: ExecutionContext): IN => Future[OUT]
   }
 
-
   trait AsyncInputValidator[IN,USER <: UsingID,FAILURE] {
     def validateInput(in: IN)(implicit ec: ExecutionContext): Future[Validation[FAILURE,USER]]
   }

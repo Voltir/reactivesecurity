@@ -14,8 +14,7 @@ import play.api.data._
 import play.api.data.Forms._
 
 import reactivesecurity.core.User.{UserService, UsingID}
-import reactivesecurity.core.{Password, LoginHandler}
-import play.api.mvc.SimpleResult
+import reactivesecurity.core.LoginHandler
 
 case class ConfirmationToken(uuid: String, email: String, creationTime: DateTime, expirationTime: DateTime, isSignUp: Boolean) {
   def isExpired = expirationTime.isBeforeNow
@@ -48,15 +47,15 @@ trait Login[USER <: UsingID] extends Controller {
   val passwordService: PasswordService[USER]
   val confirmationTokenService: ConfirmationTokenService
 
-  def onUnauthorized(request: RequestHeader): SimpleResult
-  def onLoginSucceeded(request: RequestHeader): SimpleResult
-  def onLogoutSucceeded(request: RequestHeader): SimpleResult
-  def onLogin(request: RequestHeader): SimpleResult
+  def onUnauthorized(request: RequestHeader): Result
+  def onLoginSucceeded(request: RequestHeader): Result
+  def onLogoutSucceeded(request: RequestHeader): Result
+  def onLogin(request: RequestHeader): Result
 
-  def onStartSignUp(request: RequestHeader, error: Option[String]): SimpleResult
-  def onFinishSignUp(request: RequestHeader): SimpleResult
-  def onStartCompleteRegistration(request: RequestHeader, confirmation: String, id: USER#ID): SimpleResult
-  def onCompleteRegistration[A](confirmation: String, id: USER#ID)(implicit request: Request[A]): (Option[USER],SimpleResult)
+  def onStartSignUp(request: RequestHeader, error: Option[String]): Result
+  def onFinishSignUp(request: RequestHeader): Result
+  def onStartCompleteRegistration(request: RequestHeader, confirmation: String, id: USER#ID): Result
+  def onCompleteRegistration[A](confirmation: String, id: USER#ID)(implicit request: Request[A]): (Option[USER],Result)
 
   def login = Action { implicit request =>
     withRefererAsOriginalUrl(onLogin(request))
@@ -70,7 +69,7 @@ trait Login[USER <: UsingID] extends Controller {
     withRefererAsOriginalUrl(onStartSignUp(request,None))
   }
 
-  def handleStartRegistration = Action.async { implicit request =>
+  def handleStartRegistration = Action { implicit request => Async {
     LoginForms.registrationForm.bindFromRequest.fold(
       errors => future { println("TODO REGISTRATION: "+errors); onStartSignUp(request,None) },
       { case (email,pass) =>
@@ -89,9 +88,9 @@ trait Login[USER <: UsingID] extends Controller {
         }
       }
     )
-  }
+  }}
 
-  def executeForToken[A](confirmation: String, isSignUp: Boolean, f: ConfirmationToken => SimpleResult)(implicit request: Request[A]): Future[SimpleResult] = future {
+  def executeForToken[A](confirmation: String, isSignUp: Boolean, f: ConfirmationToken => Result)(implicit request: Request[A]): Future[Result] = future {
     confirmationTokenService.find(confirmation) match {
       case Some(t) if !t.isExpired && t.isSignUp == isSignUp => {
         f(t)
@@ -102,13 +101,13 @@ trait Login[USER <: UsingID] extends Controller {
     }
   }
 
-  def registration(confirmation: String) = Action.async { implicit request =>
+  def registration(confirmation: String) = Action { implicit request => Async {
     executeForToken(confirmation, true, { c =>
       onStartCompleteRegistration(request,confirmation,userService.idFromEmail(c.email))
     })
-  }
+  }}
 
-  def handleRegistration(confirmation: String) =  Action.async { implicit request =>
+  def handleRegistration(confirmation: String) =  Action { implicit request => Async {
     executeForToken(confirmation, true, { c =>
 
       ///loginHandler.getUserForm(asID(c.email)).bindFromRequest.fold(
@@ -141,9 +140,9 @@ trait Login[USER <: UsingID] extends Controller {
       }
       result
     })
-  }
+  }}
 
-  def withRefererAsOriginalUrl[A](result: SimpleResult)(implicit request: Request[A]): SimpleResult = {
+  def withRefererAsOriginalUrl[A](result: Result)(implicit request: Request[A]): Result = {
     request.session.get(LoginHandler.OriginalUrlKey) match {
       // If there's already an original url recorded we keep it: e.g. if s.o. goes to
       // login, switches to signup and goes back to login we want to keep the first referer
