@@ -22,11 +22,16 @@ object User {
 
   trait UserService[USER <: UsingID] { this: StringAsID[USER] =>
 
-    def find(id: USER#ID)(implicit ec: ExecutionContext): Future[Validation[UserServiceFailure, USER]]
-    def save(user: USER): Unit
+    def find(id: USER#ID)(implicit ec: ExecutionContext): Future[Option[USER]]
+
+    //Ignore invalid ids
+    def findMany(ids: List[USER#ID])(implicit ec: ExecutionContext): Future[List[USER]]
 
     def idFromEmail(email: String): USER#ID
+
     def strAsId(idStr: String): USER#ID = this.strAsId(idStr)
+
+    def save(user: USER): Unit
   }
 
 }

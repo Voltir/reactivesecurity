@@ -11,9 +11,11 @@ abstract class InMemoryUserService[USER <: UsingID] extends UserService[USER] { 
 
   private var users: mutable.Map[USER#ID,USER] = mutable.Map()
 
-  override def find(id: USER#ID)(implicit ec: ExecutionContext) = future {
-    users.get(id).map(Success(_)).getOrElse(Failure(IdentityNotFound(id)))
-  }
+  override def find(id: USER#ID)(implicit ec: ExecutionContext): Future[Option[USER]] =
+    future { users.get(id)  }
+
+  override def findMany(ids: List[USER#ID])(implicit ec: ExecutionContext): Future[List[USER]] =
+    future { ids.flatMap(id => users.get(id)) }
 
   override def save(user: USER): Unit = {
     users += (user.id -> user)

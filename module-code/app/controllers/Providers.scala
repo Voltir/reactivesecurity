@@ -23,7 +23,7 @@ abstract class Providers[USER <: UsingID] extends Controller {
   def authenticate(provider: String) = handleAuth(provider)
   def authenticateByPost(provider: String) = handleAuth(provider)
 
-  private def handleAuth(provider: String) = Action { implicit request =>
+  private def handleAuth(provider: String) = Action.async { implicit request =>
     /*
     Registry.providers.get(provider) match {
       case Some(p) => {
@@ -45,7 +45,7 @@ abstract class Providers[USER <: UsingID] extends Controller {
       case _ => NotFound
     }
     */
-    val resultPromise = LoginForms.loginForm.bindFromRequest().fold(
+    LoginForms.loginForm.bindFromRequest().fold(
       errors => future { Ok("Errors") },
       { case (id: String, password: String) => {
         val credentials = IdPass(id,password)
@@ -58,12 +58,9 @@ abstract class Providers[USER <: UsingID] extends Controller {
         }
       }}
     )
-    Async {
-      resultPromise
-    }
   }
 
-  def completeAuthentication(user: USER, session: Session)(implicit request: RequestHeader): Result = {
+  def completeAuthentication(user: USER, session: Session)(implicit request: RequestHeader): SimpleResult = {
     if ( Logger.isDebugEnabled ) {
       Logger.debug("[reactivesecurity] user logged in : [" + user + "]")
     }

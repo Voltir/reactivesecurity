@@ -2,7 +2,7 @@ package reactivesecurity.core.providers
 
 import reactivesecurity.core.Authentication.AuthenticationService
 import reactivesecurity.core.Password.PasswordService
-import reactivesecurity.core.std.{UserServiceFailure, AuthenticationServiceFailure, AuthenticationFailure}
+import reactivesecurity.core.std.{IdentityNotFound, UserServiceFailure, AuthenticationServiceFailure, AuthenticationFailure}
 import scalaz.{Success, Failure, Validation}
 import reactivesecurity.core.User.{UserService, UsingID}
 import scala.concurrent.{ExecutionContext, Future}
@@ -17,11 +17,9 @@ class UserPasswordProvider[USER <: UsingID](users: UserService[USER], passServic
 
   override def authenticate(credentials: IdPass): Future[Validation[AuthenticationFailure,USER]] = {
     val id = users.strAsId(credentials.id)
-    users.find(id).map { validation: Validation[UserServiceFailure,USER] =>
-      validation match {
-        case Failure(f) => Failure(AuthenticationServiceFailure(f))
-        case Success(user) => validator.validate(user,credentials)
-      }
-    }
+    users.find(id).map { _.fold {
+      val fail: Validation[AuthenticationFailure,USER] = Failure(AuthenticationServiceFailure(IdentityNotFound(id)))
+      fail
+    } { user =>validator.validate(user,credentials) } }
   }
 }

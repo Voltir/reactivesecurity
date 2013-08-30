@@ -8,6 +8,7 @@ object ApplicationBuild extends Build {
   val appVersion      = "1.0-SNAPSHOT"
 
   val appDependencies = Seq(
+    cache,
     "org.scalaz" %% "scalaz-core" % "7.0.1",
     "org.mindrot" % "jbcrypt" % "0.3m"
   )
