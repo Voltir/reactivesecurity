@@ -15,13 +15,13 @@ case class DemoUser(id: String) extends UsingID {
   type ID = String
 }
 
-object TodoAuthFailueHandler extends Controller with AuthenticationFailureHandler[Request[AnyContent],AuthenticationFailure,Result] {
-  def onAuthenticationFailure(in: Request[AnyContent], failure: AuthenticationFailure): Result = {
+object TodoAuthFailueHandler extends Controller with AuthenticationFailureHandler[RequestHeader,AuthenticationFailure,Result] {
+  def onAuthenticationFailure(in: RequestHeader, failure: AuthenticationFailure): Result = {
     Ok("Auth Failed")
   }
 }
 
-trait DemoSecured extends Controller with reactivesecurity.core.AnyContentAsyncSecured[DemoUser] {
+trait DemoSecured extends Controller with reactivesecurity.core.AsyncSecured[DemoUser] {
   override val inputValidator = new DefaultAuthentication[DemoUser](InMemoryDemoUsers) { }
   override val authFailureHandler = TodoAuthFailueHandler
 }

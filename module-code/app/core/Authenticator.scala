@@ -7,6 +7,7 @@ import org.joda.time.DateTime
 import play.api.mvc.{AnyContent, Request, RequestHeader, Cookie}
 import play.Play
 
+//should be moved to Plat dir
 case class CookieNotFound() extends UserServiceFailure
 
 trait CookieIdGenerator {
@@ -40,7 +41,7 @@ abstract class Authenticator {
 
   val todo_absoluteTimeout = 5
 
-  def find(request: Request[AnyContent]):Option[AuthenticatorToken] =
+  def find(request: RequestHeader):Option[AuthenticatorToken] =
     request.cookies.get(CookieParameters.cookieName).fold(None: Option[AuthenticatorToken])(c => store.find(c.value))
 
   def create(userIdString: String): Validation[AuthenticationFailure, AuthenticatorToken] = {
