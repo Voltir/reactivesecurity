@@ -28,7 +28,7 @@ object LocalCacheAuthenticationStore extends AuthenticatorStore {
   def find(id: String): Option[AuthenticatorToken] = Cache.getAs[AuthenticatorToken](id)
 }
 
-object DefaultAuthenticator extends Authenticator {
+object LocalCacheAuthenticator extends Authenticator {
   override val cookieIdGen = DefaultCookieIdGenerator
   override val store =  LocalCacheAuthenticationStore
 }

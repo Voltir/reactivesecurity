@@ -1,3 +1,4 @@
+/* TO BE DELETED
 package reactivesecurity.core
 
 import play.api.Play
@@ -14,4 +15,4 @@ object LoginHandler {
 
   val OriginalUrlKey = "original-url"
 }
-
+*/

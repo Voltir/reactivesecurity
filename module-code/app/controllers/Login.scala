@@ -1,178 +1,101 @@
 package reactivesecurity.controllers
 
-import reactivesecurity.core.Password.PasswordService
-import scalaz.Scalaz._
+import scala.concurrent.{ExecutionContext, future}
+import ExecutionContext.Implicits.global
+import scalaz.{Failure,Success}
+
 import play.api.mvc._
-import org.joda.time.DateTime
-import java.util.UUID
+import play.api.Logger
 
-import scala.concurrent.{Future,future}
-import scala.concurrent.ExecutionContext.Implicits.global
+import reactivesecurity.core.providers.{UserPasswordProvider,IdPass}
+import reactivesecurity.core.User.UsingID
+import reactivesecurity.core.std.AuthenticationServiceFailure
+import reactivesecurity.core.Authenticator
 
-import play.api.http.HeaderNames
-import play.api.data._
-import play.api.data.Forms._
+abstract class Login[USER <: UsingID] extends Controller {
+  val userPasswordProvider: UserPasswordProvider[USER]
+  val authenticator: Authenticator
 
-import reactivesecurity.core.User.{UserService, UsingID}
-import reactivesecurity.core.LoginHandler
-
-case class ConfirmationToken(uuid: String, email: String, creationTime: DateTime, expirationTime: DateTime, isSignUp: Boolean) {
-  def isExpired = expirationTime.isBeforeNow
-}
-
-trait ConfirmationTokenService {
-  val TOKEN_DURATION = 1
-
-  def createAndSaveToken(id: String,isSignUp: Boolean): String = {
-    val uuid = UUID.randomUUID.toString
-    val now = DateTime.now()
-    val token = ConfirmationToken(
-      uuid,
-      id,
-      now,
-      now.plusMinutes(TOKEN_DURATION),
-      isSignUp
-    )
-    save(token)
-    uuid
-  }
-
-  def save(token: ConfirmationToken)
-  def find(uuid: String): Option[ConfirmationToken]
-  def delete(uuid: String): Unit
-}
-
-trait Login[USER <: UsingID] extends Controller {
-  val userService: UserService[USER]
-  val passwordService: PasswordService[USER]
-  val confirmationTokenService: ConfirmationTokenService
+  //def toUrl(implicit request: RequestHeader) = session.get(LoginHandler.OriginalUrlKey).getOrElse(LoginHandler.landingUrl)
 
   def onUnauthorized(request: RequestHeader): Result
   def onLoginSucceeded(request: RequestHeader): Result
   def onLogoutSucceeded(request: RequestHeader): Result
-  def onLogin(request: RequestHeader): Result
-
-  def onStartSignUp(request: RequestHeader, error: Option[String]): Result
-  def onFinishSignUp(request: RequestHeader): Result
-  def onStartCompleteRegistration(request: RequestHeader, confirmation: String, id: USER#ID): Result
-  def onCompleteRegistration[A](confirmation: String, id: USER#ID)(implicit request: Request[A]): (Option[USER],Result)
+  def getLoginPage(request: RequestHeader): Result
 
   def login = Action { implicit request =>
-    withRefererAsOriginalUrl(onLogin(request))
+    withRefererAsOriginalUrl(getLoginPage(request))
   }
 
   def logout = Action { implicit request =>
     Ok("Todo")
   }
 
-  def startRegistration = Action { implicit request =>
-    withRefererAsOriginalUrl(onStartSignUp(request,None))
-  }
+  def authenticate(provider: String) = handleAuth(provider)
+  def authenticateByPost(provider: String) = handleAuth(provider)
 
-  def handleStartRegistration = Action { implicit request => Async {
-    LoginForms.registrationForm.bindFromRequest.fold(
-      errors => future { println("TODO REGISTRATION: "+errors); onStartSignUp(request,None) },
-      { case (email,pass) =>
-        val id = userService.idFromEmail(email)
-        userService.find(id).map { validation =>
-          validation.map { user =>
-            println("Send already registered email")
-          }.getOrElse {
-            val token = confirmationTokenService.createAndSaveToken(email,true)
-            val passInfo = passwordService.hasher.hash(pass)
-            passwordService.save(id,passInfo)
-            //TODO remember to delete token (+ password if timed out)
-            println("Send to email: " + token)
+  private def handleAuth(provider: String) = Action { implicit request => Async {
+    /*
+    Registry.providers.get(provider) match {
+      case Some(p) => {
+        try {
+          p.authenticate().fold( result => result , {
+            user => completeAuthentication(user, session)
+          })
+        } catch {
+          case ex: AccessDeniedException => {
+            Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.accessDenied"))
           }
-          onFinishSignUp(request)
+
+          case other: Throwable => {
+            Logger.error("Unable to log user in. An exception was thrown", other)
+            Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.errorLoggingIn"))
+          }
         }
       }
+      case _ => NotFound
+    }
+    */
+    LoginForms.loginForm.bindFromRequest().fold(
+      errors => future { Ok("Errors") },
+      { case (id: String, password: String) => {
+        val credentials = IdPass(id,password)
+        userPasswordProvider.authenticate(credentials).map { result =>
+          result match {
+            case Failure(AuthenticationServiceFailure(f)) => onUnauthorized(request)
+            case Failure(wat) => onUnauthorized(request)
+            case Success(user) => completeAuthentication(user,session)
+          }
+        }
+      }}
     )
   }}
 
-  def executeForToken[A](confirmation: String, isSignUp: Boolean, f: ConfirmationToken => Result)(implicit request: Request[A]): Future[Result] = future {
-    confirmationTokenService.find(confirmation) match {
-      case Some(t) if !t.isExpired && t.isSignUp == isSignUp => {
-        f(t)
-      }
-      case _ => {
-        onStartSignUp(request,Some("TODO Something about ConfirmationToken"))
+  def completeAuthentication(user: USER, session: Session)(implicit request: RequestHeader): Result = {
+    if ( Logger.isDebugEnabled ) {
+      Logger.debug("[reactivesecurity] user logged in : [" + user + "]")
+    }
+    //TODO val withSession = Events.fire(new LoginEvent(user)).getOrElse(session)
+    authenticator.create(user.id.toString) match {
+      case Failure(_) => onUnauthorized(request)
+      case Success(token) => {
+        println("Cookie: "+token.toCookie)
+        onLoginSucceeded(request).withCookies(token.toCookie)
       }
     }
-  }
-
-  def registration(confirmation: String) = Action { implicit request => Async {
-    executeForToken(confirmation, true, { c =>
-      onStartCompleteRegistration(request,confirmation,userService.idFromEmail(c.email))
-    })
-  }}
-
-  def handleRegistration(confirmation: String) =  Action { implicit request => Async {
-    executeForToken(confirmation, true, { c =>
-
-      ///loginHandler.getUserForm(asID(c.email)).bindFromRequest.fold(
-      ///  errors => { println(errors); Ok("TODO -- handleRegistration -- ERRORS") },
-      ///  user => {
-          /*
-          val saved = UserService.save(user)
-          UserService.deleteToken(t.uuid)
-          if ( UsernamePasswordProvider.sendWelcomeEmail ) {
-            Mailer.sendWelcomeEmail(saved)
-          }
-          val eventSession = Events.fire(new SignUpEvent(user)).getOrElse(session)
-          if ( UsernamePasswordProvider.signupSkipLogin ) {
-            ProviderController.completeAuthentication(user, eventSession).flashing(Success -> Messages(SignUpDone))
-          } else {
-            Redirect(onHandleSignUpGoTo).flashing(Success -> Messages(SignUpDone)).withSession(eventSession)
-          }
-          */
-      ///    users.save(user)
-      ///    //TODO Mailer
-      ///    confirmationTokenService.delete(confirmation)
-      ///    Redirect(loginHandler.registrationDoneRedirect).flashing("success" -> Messages("reactivesecurity.registrationDone"))
-      ///  }
-      ///)
-      //TODO: Rename "c.email" to something more ID like
-      val (userMaybe,result)  = onCompleteRegistration(confirmation,userService.idFromEmail(c.email))(request) //TODO - Send Mail
-      userMaybe.map {
-        confirmationTokenService.delete(confirmation)
-        userService.save(_)
+    /*
+    Authenticator.create(user) match {
+      case Right(authenticator) => {
+        Redirect(toUrl).withSession(withSession -
+          SecureSocial.OriginalUrlKey -
+          IdentityProvider.SessionId -
+          OAuth1Provider.CacheKey).withCookies(authenticator.toCookie)
       }
-      result
-    })
-  }}
-
-  def withRefererAsOriginalUrl[A](result: Result)(implicit request: Request[A]): Result = {
-    request.session.get(LoginHandler.OriginalUrlKey) match {
-      // If there's already an original url recorded we keep it: e.g. if s.o. goes to
-      // login, switches to signup and goes back to login we want to keep the first referer
-      case Some(_) => result
-      case None => {
-        request.headers.get(HeaderNames.REFERER).map { referer =>
-        // we don't want to use the ful referer, as then we might redirect from https
-        // back to http and loose our session. So let's get the path and query string only
-          val idxFirstSlash = referer.indexOf("/", "https://".length())
-          val refererUri = if (idxFirstSlash < 0) "/" else referer.substring(idxFirstSlash)
-          result.withSession(
-            request.session + (LoginHandler.OriginalUrlKey -> refererUri))
-        } | result
+      case Left(error) => {
+        // improve this
+        throw new RuntimeException("Error creating authenticator")
       }
     }
+    */
   }
-}
-
-object LoginForms {
-  val registrationForm = Form[(String,String)](
-    tuple(
-      "userid" -> nonEmptyText,
-      "password" -> nonEmptyText
-    )
-  )
-
-  val loginForm = Form[(String,String)](
-    tuple(
-      "username" -> nonEmptyText,
-      "password" -> nonEmptyText
-    )
-  )
 }
