@@ -22,6 +22,10 @@ object std {
 
   case class CredentialsNotFound() extends AuthenticationFailure
 
+  case class OauthFailure(reason: String) extends AuthenticationFailure
+
+  case class OauthNoVerifier() extends AuthenticationFailure
+
   //Move this to "play" dir
   abstract class AuthenticatedInputValidator[USER <: UsingID] extends AsyncInputValidator[RequestHeader,USER,AuthenticationFailure] {
     val users: UserService[USER]
