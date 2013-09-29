@@ -26,6 +26,8 @@ object std {
 
   case class OauthNoVerifier() extends AuthenticationFailure
 
+  case class OAuth2NoAccessCode() extends AuthenticationFailure
+
   //Move this to "play" dir
   abstract class AuthenticatedInputValidator[USER <: UsingID] extends AsyncInputValidator[RequestHeader,USER,AuthenticationFailure] {
     val users: UserService[USER]

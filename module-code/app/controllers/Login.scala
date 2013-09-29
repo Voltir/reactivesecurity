@@ -3,7 +3,7 @@ package reactivesecurity.controllers
 import reactivesecurity.core._
 import reactivesecurity.core.providers._
 import reactivesecurity.core.User.{UserService, UsingID}
-import reactivesecurity.core.std.{OauthNoVerifier, AuthenticationFailure}
+import reactivesecurity.core.std.{OAuth2NoAccessCode, OauthNoVerifier, AuthenticationFailure}
 import reactivesecurity.core.Authentication.AuthenticationService
 import reactivesecurity.core.Password.PasswordService
 
@@ -17,6 +17,8 @@ import java.util.UUID
 import scalaz.{Failure,Success}
 import scala.concurrent.{Future, ExecutionContext, future}
 import ExecutionContext.Implicits.global
+import java.net.URLEncoder
+import securesocial.core.providers.GoogleProvider
 
 
 abstract class Login[USER <: UsingID] extends Controller {
@@ -45,7 +47,7 @@ abstract class Login[USER <: UsingID] extends Controller {
   def authenticate(provider: String) = handleAuth(provider)
   def authenticateByPost(provider: String) = handleAuth(provider)
 
-  def oauthRetrieveRequestToken[A](service: OAuth, callbackUrl: String)(implicit request: Request[A]): Result = {
+  def oauth1RetrieveRequestToken[A](service: OAuth, callbackUrl: String)(implicit request: Request[A]): Result = {
     import play.api.Play.current
     if ( Logger.isDebugEnabled ) {
       Logger.debug("[reactivesecurity] callback url = " + callbackUrl)
@@ -65,22 +67,61 @@ abstract class Login[USER <: UsingID] extends Controller {
     }
   }
 
-  def handleOauth[A](p: OAuth1Provider[USER])(implicit request: Request[A]): Future[Result] = {
+  def oauth2RetrieveAccessCode[A](settings: OAuth2Settings, callbackUrl: String)(implicit request: Request[A]): Result = {
+    import play.api.Play.current
+    // There's no code in the request, this is the first step in the oauth flow
+    val state = UUID.randomUUID().toString
+    //val sessionId = request.session.get(IdentityProvider.SessionId).getOrElse(UUID.randomUUID().toString)
+    val sessionId = UUID.randomUUID().toString
+    Cache.set(sessionId, state)
+    var params = List(
+      (OAuth2Constants.ClientId, settings.clientId),
+      (OAuth2Constants.RedirectUri, callbackUrl),
+      (OAuth2Constants.ResponseType, OAuth2Constants.Code),
+      (OAuth2Constants.State, state))
+    settings.scope.foreach( s => { params = (OAuth2Constants.Scope, s) :: params })
+    val url = settings.authorizationUrl +
+      params.map( p => p._1 + "=" + URLEncoder.encode(p._2, "UTF-8")).mkString("?", "&", "")
+    if ( Logger.isDebugEnabled ) {
+      Logger.debug("[securesocial] authorizationUrl = %s".format(settings.authorizationUrl))
+      Logger.debug("[securesocial] redirecting to: [%s]".format(url))
+    }
+    //Redirect( url ).withSession(request.session + (IdentityProvider.SessionId, sessionId))
+    Redirect( url ).withSession(request.session + ("wtfisthis", sessionId))
+  }
+
+  def handleOAuth1[A](p: OAuth1Provider[USER])(implicit request: Request[A]): Future[Result] = {
     //??????????????
     lazy val conf = play.api.Play.current.configuration
     lazy val pc = play.Play.application().classloader().loadClass("controllers.ReverseLogin")
     lazy val loginMethods = pc.newInstance().asInstanceOf[{
       def authenticate(p: String): Call
-      def login: Call
-      def notAuthorized: Call
     }]
    //val callbackUrl = RoutesHelper.authenticate(id).absoluteURL(IdentityProvider.sslEnabled)
     val callback = loginMethods.authenticate(p.id).absoluteURL()
     //??????????????
     handleGenericAuth(p) { fail => fail match {
       case _: OauthNoVerifier => p.maybeService.map {
-        service => oauthRetrieveRequestToken(service,callback)
+        service => oauth1RetrieveRequestToken(service,callback)
         }.getOrElse(onUnauthorized(request))
+      case _ => onUnauthorized(request)
+    }}
+  }
+
+  def handleOAuth2[A](p: OAuth2Provider[USER])(implicit request: Request[A]): Future[Result] = {
+    //??????????????
+    lazy val conf = play.api.Play.current.configuration
+    lazy val pc = play.Play.application().classloader().loadClass("controllers.ReverseLogin")
+    lazy val loginMethods = pc.newInstance().asInstanceOf[{
+      def authenticate(p: String): Call
+    }]
+    //val callbackUrl = RoutesHelper.authenticate(id).absoluteURL(IdentityProvider.sslEnabled)
+    val callback = loginMethods.authenticate(p.id).absoluteURL()
+    //??????????????
+    handleGenericAuth(p) { fail => fail match {
+      case _: OAuth2NoAccessCode => p.maybeSettings.map {
+        settings => oauth2RetrieveAccessCode(settings,callback)
+      }.getOrElse(onUnauthorized(request))
       case _ => onUnauthorized(request)
     }}
   }
@@ -102,14 +143,20 @@ abstract class Login[USER <: UsingID] extends Controller {
     "linkedin" -> new LinkedInProviderMK2[USER](userFromOauthData)
   )
 
+  val oauth2providers = Map[String,OAuth2Provider[USER]](
+    "google" -> new GoogleProvider[USER](userFromOauthData)
+  )
+
   private def handleAuth(provider: String) = Action { implicit request => Async {
     Logger.debug("[reactivesecurity] Authorizing with provider: "+provider)
 
     if(provider == "userpass") handleGenericAuth(userpass){ fail => onUnauthorized(request) }
-
-    oauth1providers.get(provider) match {
-      case Some(p) => handleOauth(p)
-      case None => future { onUnauthorized(request) }
+    else {
+      oauth1providers.get(provider).map { oauth1 =>
+        handleOAuth1(oauth1)
+      }.getOrElse { oauth2providers.get(provider).map { oauth2 =>
+        handleOAuth2(oauth2)
+      }.getOrElse(future { onUnauthorized(request) }) }
     }
   }}
 

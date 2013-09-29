@@ -18,20 +18,20 @@ package reactivesecurity.core
 
 import _root_.java.util.UUID
 import play.api.cache.Cache
-import play.api.libs.oauth.{RequestToken, ConsumerKey, OAuth, ServiceInfo}
+
 import play.api.{ Logger, Play}
 
 import play.api.mvc.{AnyContent, Request, Result}
 import play.api.mvc.Results.{Redirect,Ok}
 import Play.current
 import reactivesecurity.core.Authentication.AuthenticationService
-import reactivesecurity.core.Password.PasswordService
+
 import reactivesecurity.core.std._
-import reactivesecurity.core.std.AuthenticationServiceFailure
+
 import reactivesecurity.core.User.{UserService, UsingID}
 import scala.concurrent.{Future, future}
 import concurrent.ExecutionContext.Implicits.global
-import scalaz.{Failure, Validation}
+import scalaz.Validation
 import play.api.libs.oauth.OAuth
 import scalaz.Failure
 import play.api.libs.oauth.ServiceInfo
