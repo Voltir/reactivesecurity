@@ -71,8 +71,7 @@ abstract class Login[USER <: UsingID] extends Controller {
     import play.api.Play.current
     // There's no code in the request, this is the first step in the oauth flow
     val state = UUID.randomUUID().toString
-    //val sessionId = request.session.get(IdentityProvider.SessionId).getOrElse(UUID.randomUUID().toString)
-    val sessionId = UUID.randomUUID().toString
+    val sessionId = request.session.get("sid").getOrElse(UUID.randomUUID().toString)
     Cache.set(sessionId, state)
     var params = List(
       (OAuth2Constants.ClientId, settings.clientId),
@@ -87,7 +86,7 @@ abstract class Login[USER <: UsingID] extends Controller {
       Logger.debug("[securesocial] redirecting to: [%s]".format(url))
     }
     //Redirect( url ).withSession(request.session + (IdentityProvider.SessionId, sessionId))
-    Redirect( url ).withSession(request.session + ("wtfisthis", sessionId))
+    Redirect( url ).withSession(request.session + ("sid", sessionId))
   }
 
   def handleOAuth1[A](p: OAuth1Provider[USER])(implicit request: Request[A]): Future[Result] = {

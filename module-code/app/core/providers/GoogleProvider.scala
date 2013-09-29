@@ -1,0 +1,78 @@
+/**
+ * Copyright 2012 Jorge Aliss (jaliss at gmail dot com) - twitter: @jaliss
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+package securesocial.core.providers
+
+import play.api.libs.ws.WS
+import play.api.{Application, Logger}
+import play.api.libs.json.JsObject
+import reactivesecurity.core.std.{OauthFailure, AuthenticationFailure}
+import reactivesecurity.core.User.UsingID
+import reactivesecurity.core.{OAuth1Info, ThisDoesNotBelongHere, OAuth2Provider}
+import securesocial.core._
+import play.api.libs.oauth.ServiceInfo
+import scala.concurrent.Future
+import concurrent.ExecutionContext.Implicits.global
+import scalaz.{Failure, Success, Validation}
+
+
+/**
+ * A Google OAuth2 Provider
+ */
+class GoogleProvider[USER <: UsingID](f: ThisDoesNotBelongHere => USER) extends OAuth2Provider[USER] {
+  val UserInfoApi = "https://www.googleapis.com/oauth2/v1/userinfo?access_token="
+  val Error = "error"
+  val Message = "message"
+  val Type = "type"
+  val Id = "id"
+  val Name = "name"
+  val GivenName = "given_name"
+  val FamilyName = "family_name"
+  val Picture = "picture"
+  val Email = "email"
+
+  override def id = GoogleProvider.Google
+
+  override val todoMaybeValidator = f
+
+  //def fill(info: OAuth2Info)(f: ThisDoesNotBelongHere => USER): Future[Validation[AuthenticationFailure,USER]] = {
+  def fill(accessToken: String)(f: ThisDoesNotBelongHere => USER): Future[Validation[AuthenticationFailure,USER]] = {
+    WS.url(UserInfoApi + accessToken).get().map { response =>
+      val me = response.json
+      (me \ Error).asOpt[JsObject] match {
+        case Some(error) =>
+          val message = (error \ Message).asOpt[String]
+          val errorType = ( error \ Type).asOpt[String]
+          Logger.error("[securesocial] error retrieving profile information from Google. Error type = %s, message = %s"
+            .format(errorType,message))
+          Failure(OauthFailure(message.getOrElse("Unknown Failure")))
+        case _ => {
+          val userId = (me \ Id).as[String]
+          val firstName = (me \ GivenName).asOpt[String].getOrElse("")
+          val lastName = (me \ FamilyName).asOpt[String].getOrElse("")
+          val fullName = (me \ Name).asOpt[String].getOrElse("")
+          val avatarUrl = ( me \ Picture).asOpt[String].getOrElse("")
+          val email = ( me \ Email).asOpt[String].getOrElse("")
+          Success(f(ThisDoesNotBelongHere(GoogleProvider.Google,userId,firstName,lastName,fullName,email)))
+        }
+      }
+    }
+  }
+}
+
+object GoogleProvider {
+  val Google = "google"
+}
