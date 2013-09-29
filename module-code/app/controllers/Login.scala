@@ -1,32 +1,23 @@
 package reactivesecurity.controllers
 
-import reactivesecurity.core.Authentication.AuthenticationService
-import reactivesecurity.core.Password.PasswordService
-import reactivesecurity.core.std.OauthNoVerifier
-import reactivesecurity.core.ThisDoesNotBelongHere
-import reactivesecurity.core.ThisDoesNotBelongHere
-import scala.concurrent.{Future, ExecutionContext, future}
-import ExecutionContext.Implicits.global
-import scalaz.{Failure,Success}
-
-import play.api.mvc._
-import play.api.{Play, Logger}
-
+import reactivesecurity.core._
 import reactivesecurity.core.providers._
 import reactivesecurity.core.User.{UserService, UsingID}
-import reactivesecurity.core.std.{OauthNoVerifier, AuthenticationFailure, AuthenticationServiceFailure}
-import reactivesecurity.core.{ThisDoesNotBelongHere, Authenticator, OAuth1Provider}
-import scalaz.Failure
-import scala.Some
-import play.api.mvc.Call
-import scalaz.Success
-import java.util.UUID
-import play.api.mvc.Results._
-import scalaz.Failure
-import scala.Some
-import play.api.mvc.Call
-import scalaz.Success
+import reactivesecurity.core.std.{OauthNoVerifier, AuthenticationFailure}
+import reactivesecurity.core.Authentication.AuthenticationService
+import reactivesecurity.core.Password.PasswordService
+
+import play.api.mvc._
+import play.api.Logger
 import play.api.cache.Cache
+import play.api.mvc.Call
+import play.api.libs.oauth.OAuth
+
+import java.util.UUID
+import scalaz.{Failure,Success}
+import scala.concurrent.{Future, ExecutionContext, future}
+import ExecutionContext.Implicits.global
+
 
 abstract class Login[USER <: UsingID] extends Controller {
   val userService: UserService[USER]
@@ -54,10 +45,8 @@ abstract class Login[USER <: UsingID] extends Controller {
   def authenticate(provider: String) = handleAuth(provider)
   def authenticateByPost(provider: String) = handleAuth(provider)
 
-
-  def iamgettingtired(callbackUrl: String, request: Request[AnyContent]): Result = {
+  def oauthRetrieveRequestToken[A](service: OAuth, callbackUrl: String)(implicit request: Request[A]): Result = {
     import play.api.Play.current
-    val service = new LinkedInProviderMK2[USER](userFromOauthData).service //todo generalize this somehow
     if ( Logger.isDebugEnabled ) {
       Logger.debug("[reactivesecurity] callback url = " + callbackUrl)
     }
@@ -75,8 +64,8 @@ abstract class Login[USER <: UsingID] extends Controller {
       }
     }
   }
-  //def handleOauth[A](p: LinkedInProvider[USER])(implicit request: Request[A]): Future[Either[Result, USER]] = {
-  def handleOauth(p: AuthenticationService[Request[AnyContent],USER,AuthenticationFailure])(implicit request: Request[AnyContent]): Future[Result] = {
+
+  def handleOauth[A](p: OAuth1Provider[USER])(implicit request: Request[A]): Future[Result] = {
     //??????????????
     lazy val conf = play.api.Play.current.configuration
     lazy val pc = play.Play.application().classloader().loadClass("controllers.ReverseLogin")
@@ -85,85 +74,44 @@ abstract class Login[USER <: UsingID] extends Controller {
       def login: Call
       def notAuthorized: Call
     }]
-    val callback = loginMethods.authenticate("linkedin").absoluteURL()
+   //val callbackUrl = RoutesHelper.authenticate(id).absoluteURL(IdentityProvider.sslEnabled)
+    val callback = loginMethods.authenticate(p.id).absoluteURL()
     //??????????????
-    //p.authenticate(request).fold(
-    /*
-    p.rawrStab(callback)(userFromOauthData).map { _.fold(
-      (result:Result) => Left(result),
-      (u:USER) => {
-        val saved = userService.save(u)
-        Right(u)
-      }
-    )}
-    */
+    handleGenericAuth(p) { fail => fail match {
+      case _: OauthNoVerifier => p.maybeService.map {
+        service => oauthRetrieveRequestToken(service,callback)
+        }.getOrElse(onUnauthorized(request))
+      case _ => onUnauthorized(request)
+    }}
+  }
+
+  def handleGenericAuth[A](p: AuthenticationService[Request[A],USER,AuthenticationFailure])(onFail: AuthenticationFailure => Result)(implicit request: Request[A]): Future[Result] = {
     p.authenticate(request).map { _.fold(
-      fail => fail match {
-        case _: OauthNoVerifier => iamgettingtired(callback,request)
-        case _ => onUnauthorized(request)
-      },
+      fail => onFail(fail),
       (user: USER) => {
         //super hacks... really really want to fix this later...
         userService.save(user)
         completeAuthentication(user,session)
       }
     )}
-
   }
+
+  val userpass = new UserPasswordFormProvider(userService,passService)
+
+  val oauth1providers = Map[String, OAuth1Provider[USER]](
+    "linkedin" -> new LinkedInProviderMK2[USER](userFromOauthData)
+  )
 
   private def handleAuth(provider: String) = Action { implicit request => Async {
     Logger.debug("[reactivesecurity] Authorizing with provider: "+provider)
-    val providers = Map[String, AuthenticationService[Request[AnyContent],USER,AuthenticationFailure]](
-      "userpass" -> new UserPasswordFormProvider(userService,passService),
-      "linkedin" -> new LinkedInProviderMK2[USER](userFromOauthData))
-    providers.get(provider) match {
+
+    if(provider == "userpass") handleGenericAuth(userpass){ fail => onUnauthorized(request) }
+
+    oauth1providers.get(provider) match {
       case Some(p) => handleOauth(p)
       case None => future { onUnauthorized(request) }
     }
-    /*
-    val fuck = new LinkedInProvider[USER]()
-    handleOauth(fuck).map { _.fold[Result](
-      result => result,
-      user => completeAuthentication(user,session)
-    )}
-    */
-    /*
-    Registry.providers.get(provider) match {
-      case Some(p) => {
-        try {
-          p.authenticate().fold( result => result , {
-            user => completeAuthentication(user, session)
-          })
-        } catch {
-          case ex: AccessDeniedException => {
-            Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.accessDenied"))
-          }
-
-          case other: Throwable => {
-            Logger.error("Unable to log user in. An exception was thrown", other)
-            Redirect(RoutesHelper.login()).flashing("error" -> Messages("securesocial.login.errorLoggingIn"))
-          }
-        }
-      }
-      case _ => NotFound
-    }
-    */
-    /*
-    LoginForms.loginForm.bindFromRequest().fold(
-    errors => future { Ok("Errors") },
-    { case (id: String, password: String) => {
-      val credentials = IdPass(id,password)
-      userPasswordProvider.authenticate(credentials).map { result =>
-        result match {
-          case Failure(AuthenticationServiceFailure(f)) => onUnauthorized(request)
-          case Failure(wat) => onUnauthorized(request)
-          case Success(user) => completeAuthentication(user,session)
-        }
-      }
-    }}
-    ) */
   }}
-
 
   def completeAuthentication(user: USER, session: Session)(implicit request: RequestHeader): Result = {
     if ( Logger.isDebugEnabled ) {

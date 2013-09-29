@@ -19,15 +19,15 @@ package reactivesecurity.core.providers
 import reactivesecurity.core.OAuth1Info
 import reactivesecurity.core.std.OauthFailure
 import reactivesecurity.core.std.{OauthFailure, AuthenticationFailure}
+import reactivesecurity.core._
 import reactivesecurity.core.ThisDoesNotBelongHere
-import reactivesecurity.core.{Oauth1ProviderMK2, ThisDoesNotBelongHere, OAuth1Provider, OAuth1Info}
 import reactivesecurity.core.User.UsingID
 import play.api.libs.oauth._
 import play.api.libs.ws.WS
 import play.api.Logger
 import LinkedInProvider._
 import scala.concurrent.Future
-import scalaz.{Success, Failure, Validation}
+import scalaz.Validation
 import concurrent.ExecutionContext.Implicits.global
 import play.api.libs.oauth.ServiceInfo
 import play.api.libs.oauth.RequestToken
@@ -36,15 +36,23 @@ import scalaz.Success
 import play.api.libs.oauth.ConsumerKey
 import scalaz.Failure
 import scala.Some
+import play.api.libs.oauth.ServiceInfo
+import play.api.libs.oauth.RequestToken
+import play.api.libs.oauth.OAuthCalculator
+import scalaz.Success
+import scalaz.Failure
+import scala.Some
 
 
-class LinkedInProviderMK2[USER <: UsingID](f: ThisDoesNotBelongHere => USER) extends Oauth1ProviderMK2[USER] {
-  val serviceInfo = ServiceInfo(
+class LinkedInProviderMK2[USER <: UsingID](f: ThisDoesNotBelongHere => USER) extends OAuth1Provider[USER] {
+  /*val serviceInfo = ServiceInfo(
     "https://api.linkedin.com/uas/oauth/requestToken",
     "https://api.linkedin.com/uas/oauth/accessToken",
     "https://api.linkedin.com/uas/oauth/authenticate",
     ConsumerKey("r3qupq7ohgp4", "CiGEuduaOanl52HT"))
-  override val service = OAuth(serviceInfo, use10a = true)
+  override val service = OAuth(serviceInfo, use10a = true)*/
+
+  override def id = LinkedInProvider.LinkedIn
 
   override val todoMaybeValidator = f
 
@@ -62,7 +70,7 @@ class LinkedInProviderMK2[USER <: UsingID](f: ThisDoesNotBelongHere => USER) ext
             "Error retrieving information from LinkedIn. Error code: %s, requestId: %s, message: %s, timestamp: %s"
               format(error, message, requestId, timestamp)
           )
-          Failure(OauthFailure(message.getOrElse("Unknown")))
+          Failure(OauthFailure(message.getOrElse("Unknown Failure")))
         }
         case _ => {
           val userId = (me \ Id).as[String]
@@ -71,7 +79,7 @@ class LinkedInProviderMK2[USER <: UsingID](f: ThisDoesNotBelongHere => USER) ext
           val fullName = (me \ FormattedName).asOpt[String].getOrElse("")
           val email = (me \ Email).asOpt[String].getOrElse("")
           val avatarUrl = (me \ PictureUrl).asOpt[String]
-          Success(f(ThisDoesNotBelongHere("linkedin",userId,firstName,lastName,fullName,email)))
+          Success(f(ThisDoesNotBelongHere(LinkedInProvider.LinkedIn,userId,firstName,lastName,fullName,email)))
         }
       }
     }
@@ -79,7 +87,7 @@ class LinkedInProviderMK2[USER <: UsingID](f: ThisDoesNotBelongHere => USER) ext
 }
 /**
  * A LinkedIn Provider
- */
+
 class LinkedInProvider[USER <: UsingID] extends OAuth1Provider[USER] {
 
 
@@ -114,6 +122,7 @@ class LinkedInProvider[USER <: UsingID] extends OAuth1Provider[USER] {
     }
   }
 }
+ */
 
 object LinkedInProvider {
   val Api = "https://api.linkedin.com/v1/people/~:(id,first-name,last-name,formatted-name,picture-url,email-address)?format=json"
@@ -128,5 +137,4 @@ object LinkedInProvider {
   val Email = "emailAddress"
   val FormattedName = "formattedName"
   val PictureUrl = "pictureUrl"
-
 }

@@ -53,23 +53,37 @@ case class ThisDoesNotBelongHere(
   full: String,
   email: String)
 
-abstract class Oauth1ProviderMK2[USER <: UsingID] extends AuthenticationService[Request[AnyContent],USER,AuthenticationFailure] {
-  val service: OAuth
+abstract class OAuth1Provider[USER <: UsingID] extends AuthenticationService[Request[_],USER,AuthenticationFailure] {
+
   val todoMaybeValidator: ThisDoesNotBelongHere => USER
+
+  def id: String
 
   def fill(oauthInfo: OAuth1Info, serviceInfo: ServiceInfo)(f: ThisDoesNotBelongHere => USER): Future[Validation[AuthenticationFailure,USER]]
 
-  override def authenticate(credentials: Request[AnyContent]): Future[Validation[AuthenticationFailure,USER]] = {
-    val fail: Validation[AuthenticationFailure,USER] = Failure(OauthFailure("Todo.. fix this message"))
+  val serviceInfo: Option[ServiceInfo]= for {
+    requestToken    <- Helper.loadProperty(OAuth1Provider.RequestTokenUrl,id)
+    accessToken     <- Helper.loadProperty(OAuth1Provider.AccessTokenUrl,id)
+    authorization   <- Helper.loadProperty(OAuth1Provider.AuthorizationUrl,id)
+    consumerKey     <- Helper.loadProperty(OAuth1Provider.ConsumerKey,id)
+    consumerSecret  <- Helper.loadProperty(OAuth1Provider.ConsumerSecret,id)
+  } yield {
+    ServiceInfo(requestToken,accessToken,authorization, ConsumerKey(consumerKey, consumerSecret))
+  }
+
+  val maybeService: Option[OAuth] =  serviceInfo.map { info => OAuth(info, use10a = true) }
+
+  override def authenticate(credentials: Request[_]): Future[Validation[AuthenticationFailure,USER]] = {
+    def fail(errTxt: String): Validation[AuthenticationFailure,USER] = Failure(OauthFailure(errTxt))
     credentials.queryString.get("oauth_verifier").map { seq =>
       val verifier = seq.head
       // 2nd step in the oauth flow, we have the access token in the cache, we need to
       // swap it for the access token
-      val wat = for {
+      val result = for {
+        service <- maybeService
         cacheKey <- credentials.session.get(OAuth1Provider.CacheKey)
         requestToken <- Cache.getAs[RequestToken](cacheKey)
       } yield {
-
         service.retrieveAccessToken(RequestToken(requestToken.token, requestToken.secret), verifier) match {
           case Right(token) =>
             // the Cache api does not have a remove method.  Just set the cache key and expire it after 1 second for
@@ -78,99 +92,24 @@ abstract class Oauth1ProviderMK2[USER <: UsingID] extends AuthenticationService[
             fill(OAuth1Info(token.token, token.secret),service.info)(todoMaybeValidator)
           case Left(oauthException) => {
             Logger.error("[reactivesecurity] error retrieving access token", oauthException)
-            future { fail }
+            future { fail(oauthException.getMessage) }
           }
         }
       }
-      wat.getOrElse(future { fail })
+      result.getOrElse(future { fail("Invalid Provider or RequestToken") })
     }.getOrElse(future { Failure(OauthNoVerifier()) })
   }
 }
 
-abstract class OAuth1Provider[USER <: UsingID] /*extends AuthenticationService[RequestHeader,USER,AuthenticationFailure]*/ {
-  //val serviceInfo = createServiceInfo(propertyKey)
-  val serviceInfo = ServiceInfo(
-    "https://api.linkedin.com/uas/oauth/requestToken",
-    "https://api.linkedin.com/uas/oauth/accessToken",
-    "https://api.linkedin.com/uas/oauth/authenticate",
-    ConsumerKey("r3qupq7ohgp4", "CiGEuduaOanl52HT"))
-  val service = OAuth(serviceInfo, use10a = true)
+object Helper {
+  def propertyKey(id: String) = s"reactivesecurity.$id."
 
-  //def authMethod = AuthenticationMethod.OAuth1
-  /*
-  def createServiceInfo(key: String): ServiceInfo = {
-    val result = for {
-      requestTokenUrl <- loadProperty(OAuth1Provider.RequestTokenUrl) ;
-      accessTokenUrl <- loadProperty(OAuth1Provider.AccessTokenUrl) ;
-      authorizationUrl <- loadProperty(OAuth1Provider.AuthorizationUrl) ;
-      consumerKey <- loadProperty(OAuth1Provider.ConsumerKey) ;
-      consumerSecret <- loadProperty(OAuth1Provider.ConsumerSecret)
-    } yield {
-      ServiceInfo(requestTokenUrl, accessTokenUrl, authorizationUrl, ConsumerKey(consumerKey, consumerSecret))
+  def loadProperty(property: String, provider: String): Option[String] = {
+    val result = play.api.Play.application.configuration.getString(propertyKey(provider) + property)
+    if ( !result.isDefined ) {
+      Logger.error("[reactivesecurity] Missing property " + property + " for provider " + provider)
     }
-
-    if ( result.isEmpty ) {
-      throwMissingPropertiesException()
-    }
-    result.get
-  }
-  */
-
-  def fill(oauthInfo: OAuth1Info, serviceInfo: ServiceInfo)(f: ThisDoesNotBelongHere => USER): Future[Validation[AuthenticationFailure,USER]]
-
-  //override def authenticate(request: RequestHeader): Future[Validation[AuthenticationFailure,USER]] = {
-  def rawrStab[A](callbackUrl: String)(f: ThisDoesNotBelongHere => USER)(implicit request: Request[A]): Future[Either[Result, USER]] = {
-    if ( request.queryString.get("denied").isDefined ) {
-      // the user did not grant access to the account
-    }
-
-    request.queryString.get("oauth_verifier").map[Future[Either[Result, USER]]] { seq =>
-      val verifier = seq.head
-      val stabwat: Future[Either[Result, USER]] = future { Left(Ok("An Error Occured and fix this")) }
-      // 2nd step in the oauth flow, we have the access token in the cache, we need to
-      // swap it for the access token
-      val wat = for {
-        cacheKey <- request.session.get(OAuth1Provider.CacheKey)
-        requestToken <- Cache.getAs[RequestToken](cacheKey)
-      } yield {
-
-        service.retrieveAccessToken(RequestToken(requestToken.token, requestToken.secret), verifier) match {
-          case Right(token) =>
-            // the Cache api does not have a remove method.  Just set the cache key and expire it after 1 second for
-            // now.
-            Cache.set(cacheKey, "", 1)
-            fill(OAuth1Info(token.token, token.secret),serviceInfo)(f).map { _.fold(
-              fail => Left(Ok("Handle 2nd stage fail to create a user")),
-              (user: USER) => Right(user)
-            )}
-          case Left(oauthException) => {
-            Logger.error("[reactivesecurity] error retrieving access token", oauthException)
-            stabwat
-          }
-        }
-      }
-    wat.getOrElse(stabwat)
-    }.getOrElse {
-      // the oauth_verifier field is not in the request, this is the 1st step in the auth flow.
-      // we need to get the request tokens
-      //val callbackUrl = RoutesHelper.authenticate(id).absoluteURL(IdentityProvider.sslEnabled)
-      if ( Logger.isDebugEnabled ) {
-        Logger.debug("[reactivesecurity] callback url = " + callbackUrl)
-      }
-      service.retrieveRequestToken(callbackUrl) match {
-        case Right(accessToken) =>  {
-          val cacheKey = UUID.randomUUID().toString
-          val redirect = Redirect(service.redirectUrl(accessToken.token)).withSession(request.session +
-            (OAuth1Provider.CacheKey -> cacheKey))
-          Cache.set(cacheKey, accessToken, 600) // set it for 10 minutes, plenty of time to log in
-          future { (Left(redirect)) }
-        }
-        case Left(e) => {
-          Logger.error("[reactivesecurity] error retrieving request token", e)
-          future { Left(Ok("Todo -- Handle error case when retriving request token")) }
-        }
-      }
-    }
+    result
   }
 }
 
