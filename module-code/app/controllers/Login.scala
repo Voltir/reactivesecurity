@@ -19,13 +19,12 @@ import scala.concurrent.{Future, ExecutionContext, future}
 import ExecutionContext.Implicits.global
 import java.net.URLEncoder
 import securesocial.core.providers.GoogleProvider
+import core.util.RoutesHelper
 
 
 abstract class Login[USER <: UsingID] extends Controller {
   val userService: UserService[USER]
   val passService: PasswordService[USER]
-
-  val userPasswordProvider: UserPasswordProvider[USER]   //todo, delete this
 
   val authenticator: Authenticator
 
@@ -90,19 +89,16 @@ abstract class Login[USER <: UsingID] extends Controller {
   }
 
   def handleOAuth1[A](p: OAuth1Provider[USER])(implicit request: Request[A]): Future[Result] = {
-    //??????????????
-    lazy val conf = play.api.Play.current.configuration
-    lazy val pc = play.Play.application().classloader().loadClass("controllers.ReverseLogin")
-    lazy val loginMethods = pc.newInstance().asInstanceOf[{
-      def authenticate(p: String): Call
-    }]
-   //val callbackUrl = RoutesHelper.authenticate(id).absoluteURL(IdentityProvider.sslEnabled)
-    val callback = loginMethods.authenticate(p.id).absoluteURL()
-    //??????????????
+    val callback = RoutesHelper.authenticate(p.id).absoluteURL()
     handleGenericAuth(p) { fail => fail match {
       case _: OauthNoVerifier => p.maybeService.map {
         service => oauth1RetrieveRequestToken(service,callback)
-        }.getOrElse(onUnauthorized(request))
+        }.getOrElse {
+          if ( Logger.isDebugEnabled ) {
+            Logger.debug(s"[securesocial] Error using Oauth Service: ${p.id}")
+          }
+          onUnauthorized(request)
+        }
       case _ => onUnauthorized(request)
     }}
   }
@@ -136,7 +132,7 @@ abstract class Login[USER <: UsingID] extends Controller {
     )}
   }
 
-  val userpass = new UserPasswordFormProvider(userService,passService)
+  lazy val userpass = new UserPasswordFormProvider(userService,passService)
 
   val oauth1providers = Map[String, OAuth1Provider[USER]](
     "linkedin" -> new LinkedInProviderMK2[USER](userFromOauthData)
@@ -148,7 +144,6 @@ abstract class Login[USER <: UsingID] extends Controller {
 
   private def handleAuth(provider: String) = Action { implicit request => Async {
     Logger.debug("[reactivesecurity] Authorizing with provider: "+provider)
-
     if(provider == "userpass") handleGenericAuth(userpass){ fail => onUnauthorized(request) }
     else {
       oauth1providers.get(provider).map { oauth1 =>
@@ -164,7 +159,6 @@ abstract class Login[USER <: UsingID] extends Controller {
       Logger.debug("[reactivesecurity] user logged in : [" + user + "]")
     }
     //TODO val withSession = Events.fire(new LoginEvent(user)).getOrElse(session)
-    Logger.debug("[reactivesecurity] completeAuthentication -- This should work... "+user.id)
     authenticator.create(user.id.toString) match {
       case Failure(_) => onUnauthorized(request)
       case Success(token) => {
