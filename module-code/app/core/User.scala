@@ -21,7 +21,6 @@ object User {
   }
 
   trait UserService[USER <: UsingID] { this: StringAsID[USER] =>
-
     def find(id: USER#ID)(implicit ec: ExecutionContext): Future[Option[USER]]
 
     //Ignore invalid ids
@@ -31,7 +30,7 @@ object User {
 
     def strAsId(idStr: String): USER#ID = this.strAsId(idStr)
 
-    def save(user: USER): Unit
+    def save(user: USER)(implicit ec: ExecutionContext): Future[Boolean]
   }
 
 }

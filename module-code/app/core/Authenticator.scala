@@ -26,7 +26,7 @@ case class AuthenticatorToken(id: String, uid: String, creation: DateTime, lastU
     Cookie(
       cookieName,
       id,
-      Some(60),
+      Some(3600*10), //TODO -- Use expiration?
       cookiePath,
       None
       //secure = cookieSecure,
@@ -45,6 +45,7 @@ abstract class Authenticator {
     request.cookies.get(CookieParameters.cookieName).fold(None: Option[AuthenticatorToken])(c => store.find(c.value))
 
   def create(userIdString: String): Validation[AuthenticationFailure, AuthenticatorToken] = {
+    println(s"core.Authenticator.scala -- Creating token using string $userIdString")
     val id = cookieIdGen.generate()
     val now = DateTime.now()
     val expirationDate = now.plusMinutes(todo_absoluteTimeout)

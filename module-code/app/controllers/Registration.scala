@@ -42,44 +42,40 @@ trait Registration[USER <: UsingID] extends Controller {
   val userService: UserService[USER]
   val passwordService: PasswordService[USER]
   val confirmationTokenService: ConfirmationTokenService
-  //val loginActions: LoginActions
 
-  /*def onUnauthorized(request: RequestHeader): Result
-  def onLoginSucceeded(request: RequestHeader): Result
-  def onLogoutSucceeded(request: RequestHeader): Result
-  def getLoginPage(request: RequestHeader): Result*/
-
-  def onStartSignUp(request: RequestHeader, error: Option[String]): Result
-  def onFinishSignUp(request: RequestHeader): Result
-  def onStartCompleteRegistration(request: RequestHeader, confirmation: String, id: USER#ID): Result
-  def onCompleteRegistration[A](confirmation: String, id: USER#ID)(implicit request: Request[A]): (Option[USER],Result)
+  def onStartSignUp(request: RequestHeader, error: Option[String]): SimpleResult
+  def onFinishSignUp(request: RequestHeader,cheatToken: Option[String]): SimpleResult //TODO -- Don't send this to the client... (Better yet, don't handle registration at all!)
+  def onStartCompleteRegistration(request: RequestHeader, confirmation: String, id: USER#ID): SimpleResult
+  def onCompleteRegistration[A](confirmation: String, id: USER#ID)(implicit request: Request[A]): (Option[USER],SimpleResult)
 
   def startRegistration = Action { implicit request =>
     withRefererAsOriginalUrl(onStartSignUp(request,None))
   }
 
-  def handleStartRegistration = Action { implicit request => Async {
+  def handleStartRegistration = Action.async { implicit request =>
     LoginForms.registrationForm.bindFromRequest.fold(
       errors => future { println("TODO REGISTRATION: "+errors); onStartSignUp(request,None) },
       { case (email,pass) =>
         val id = userService.idFromEmail(email)
         userService.find(id).map { validation =>
-          validation.map { user =>
+         val maybeToken = validation.map { user =>
             println("Send already registered email")
+            None
           }.getOrElse {
             val token = confirmationTokenService.createAndSaveToken(email,true)
             val passInfo = passwordService.hasher.hash(pass)
             passwordService.save(id,passInfo)
             //TODO remember to delete token (+ password if timed out)
             println("Send to email: " + token)
+            Some(token)
           }
-          onFinishSignUp(request)
+          onFinishSignUp(request,maybeToken)
         }
       }
     )
-  }}
+  }
 
-  def executeForToken[A](confirmation: String, isSignUp: Boolean, f: ConfirmationToken => Result)(implicit request: Request[A]): Future[Result] = future {
+  def executeForToken[A](confirmation: String, isSignUp: Boolean, f: ConfirmationToken => SimpleResult)(implicit request: Request[A]): Future[SimpleResult] = future {
     confirmationTokenService.find(confirmation) match {
       case Some(t) if !t.isExpired && t.isSignUp == isSignUp => {
         f(t)
@@ -90,13 +86,13 @@ trait Registration[USER <: UsingID] extends Controller {
     }
   }
 
-  def registration(confirmation: String) = Action { implicit request => Async {
+  def registration(confirmation: String) = Action.async { implicit request =>
     executeForToken(confirmation, true, { c =>
       onStartCompleteRegistration(request,confirmation,userService.idFromEmail(c.email))
     })
-  }}
+  }
 
-  def handleRegistration(confirmation: String) =  Action { implicit request => Async {
+  def handleRegistration(confirmation: String) =  Action.async { implicit request =>
     executeForToken(confirmation, true, { c =>
 
       ///loginHandler.getUserForm(asID(c.email)).bindFromRequest.fold(
@@ -123,16 +119,17 @@ trait Registration[USER <: UsingID] extends Controller {
       ///)
       //TODO: Rename "c.email" to something more ID like
       val (userMaybe,result)  = onCompleteRegistration(confirmation,userService.idFromEmail(c.email))(request) //TODO - Send Mail
-      userMaybe.map {
+      userMaybe.map { user =>
         confirmationTokenService.delete(confirmation)
-        userService.save(_)
+        userService.save(user)
       }
       result
     })
-  }}
+  }
 }
 
 object LoginForms {
+
   val registrationForm = Form[(String,String)](
     tuple(
       "userid" -> nonEmptyText,
