@@ -21,11 +21,17 @@ object DefaultCookieIdGenerator extends CookieIdGenerator {
 }
 
 object LocalCacheAuthenticationStore extends AuthenticatorStore {
-  def save(authenticator: AuthenticatorToken): Validation[Error, Unit] = {
-    Cache.set(authenticator.id,authenticator)
+  override def save(token: AuthenticatorToken): Validation[Error, Unit] = {
+    Cache.set(token.id,token)
     Success(Unit)
   }
-  def find(id: String): Option[AuthenticatorToken] = Cache.getAs[AuthenticatorToken](id)
+
+  override def find(id: String): Option[AuthenticatorToken] = Cache.getAs[AuthenticatorToken](id)
+
+  override def delete(token: AuthenticatorToken) = {
+    Cache.remove(token.id)
+    Success(Unit)
+  }
 }
 
 object LocalCacheAuthenticator extends Authenticator {

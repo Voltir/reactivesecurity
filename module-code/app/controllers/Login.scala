@@ -12,6 +12,8 @@ import play.api.Logger
 import play.api.cache.Cache
 import play.api.mvc.Call
 import play.api.libs.oauth.OAuth
+import play.api.data._
+import play.api.data.Forms._
 
 import java.util.UUID
 import scalaz.{Failure,Success}
@@ -20,6 +22,7 @@ import ExecutionContext.Implicits.global
 import java.net.URLEncoder
 import securesocial.core.providers.GoogleProvider
 import core.util.RoutesHelper
+
 
 
 abstract class Login[USER <: UsingID] extends Controller {
@@ -40,7 +43,10 @@ abstract class Login[USER <: UsingID] extends Controller {
   }
 
   def logout = Action { implicit request =>
-    Ok("Todo")
+    authenticator.find(request).map { token =>
+      authenticator.delete(token)
+      onLogoutSucceeded(request).discardingCookies(DiscardingCookie(CookieParameters.cookieName))
+    }.getOrElse(getLoginPage(request))
   }
 
   def authenticate(provider: String) = handleAuth(provider)
@@ -150,13 +156,18 @@ abstract class Login[USER <: UsingID] extends Controller {
     if ( Logger.isDebugEnabled ) {
       Logger.debug("[reactivesecurity] user logged in : [" + user + "]")
     }
-    //TODO val withSession = Events.fire(new LoginEvent(user)).getOrElse(session)
     authenticator.create(user.id.toString) match {
       case Failure(_) => onUnauthorized(request)
-      case Success(token) => {
-        println("completeAuthentication -- Cookie: "+token.toCookie)
-        onLoginSucceeded(request).withCookies(token.toCookie)
-      }
+      case Success(token) => onLoginSucceeded(request).withCookies(token.toCookie)
     }
   }
+}
+
+object LoginForm {
+  val loginForm = Form[(String,String)](
+    tuple(
+      "username" -> nonEmptyText,
+      "password" -> nonEmptyText
+    )
+  )
 }

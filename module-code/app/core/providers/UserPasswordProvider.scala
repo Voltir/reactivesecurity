@@ -1,6 +1,6 @@
 package reactivesecurity.core.providers
 
-import reactivesecurity.controllers.LoginForms
+import reactivesecurity.controllers.LoginForm
 import reactivesecurity.core.Authentication.AuthenticationService
 import reactivesecurity.core.Password.PasswordService
 import reactivesecurity.core.std._
@@ -38,7 +38,7 @@ class UserPasswordFormProvider[USER <: UsingID](users: UserService[USER], passSe
 
   override def authenticate(credentials: Request[AnyContent]): Future[Validation[AuthenticationFailure,USER]] = {
     val fail: Validation[AuthenticationFailure,USER] = Failure(AuthenticationServiceFailure(OauthFailure("Oauth Failed to Authenticate")))
-    LoginForms.loginForm.bindFromRequest()(credentials).fold(
+    LoginForm.loginForm.bindFromRequest()(credentials).fold(
       errors => future { fail },
       { case (id: String, password: String) =>
         val uid = users.idFromEmail(id)

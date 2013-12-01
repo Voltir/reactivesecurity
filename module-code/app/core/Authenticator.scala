@@ -15,9 +15,9 @@ trait CookieIdGenerator {
 }
 
 trait AuthenticatorStore {
-  def save(authenticator: AuthenticatorToken): Validation[Error, Unit]
+  def save(token: AuthenticatorToken): Validation[Error, Unit]
   def find(id: String): Option[AuthenticatorToken]
-  //def delete(id: String): Validation[Error, Unit]
+  def delete(token: AuthenticatorToken): Validation[Error, Unit]
 }
 
 case class AuthenticatorToken(id: String, uid: String, creation: DateTime, lastUsed: DateTime, expiration: DateTime) {
@@ -42,16 +42,18 @@ abstract class Authenticator {
   val todo_absoluteTimeout = 5
 
   def find(request: RequestHeader):Option[AuthenticatorToken] =
-    request.cookies.get(CookieParameters.cookieName).fold(None: Option[AuthenticatorToken])(c => store.find(c.value))
+    request.cookies.get(CookieParameters.cookieName).fold(None: Option[AuthenticatorToken])(t => store.find(t.value))
 
   def create(userIdString: String): Validation[AuthenticationFailure, AuthenticatorToken] = {
-    println(s"core.Authenticator.scala -- Creating token using string $userIdString")
     val id = cookieIdGen.generate()
     val now = DateTime.now()
     val expirationDate = now.plusMinutes(todo_absoluteTimeout)
     val token = AuthenticatorToken(id, userIdString, now, now, expirationDate)
     store.save(token).fold( e => Failure(AuthenticationServiceFailure(e)), _ => Success(token) )
   }
+
+  def delete(token: AuthenticatorToken) = store.delete(token)
+
 }
 
 object CookieParameters {
