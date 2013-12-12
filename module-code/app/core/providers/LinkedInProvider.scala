@@ -16,7 +16,7 @@
  */
 package reactivesecurity.core.providers
 
-import reactivesecurity.core.std.{OauthFailure, AuthenticationFailure}
+import reactivesecurity.core.Failures._
 import reactivesecurity.core._
 import reactivesecurity.core.ThisDoesNotBelongHere
 import reactivesecurity.core.User.UsingID

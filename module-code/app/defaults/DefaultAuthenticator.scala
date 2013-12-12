@@ -1,6 +1,7 @@
 package reactivesecurity.defaults
 
 import java.security.SecureRandom
+import reactivesecurity.core.User.UsingID
 import scalaz._
 
 import play.api.libs.Codecs
@@ -20,21 +21,25 @@ object DefaultCookieIdGenerator extends CookieIdGenerator {
   }
 }
 
-object LocalCacheAuthenticationStore extends AuthenticatorStore {
-  override def save(token: AuthenticatorToken): Validation[Error, Unit] = {
+class LocalCacheAuthenticationStore[USER <: UsingID] extends AuthenticatorStore[USER] {
+  override def save(token: AuthenticatorToken[USER]): Validation[Error, Unit] = {
     Cache.set(token.id,token)
     Success(Unit)
   }
 
-  override def find(id: String): Option[AuthenticatorToken] = Cache.getAs[AuthenticatorToken](id)
+  override def find(id: String): Option[AuthenticatorToken[USER]] = {
+    Cache.getAs[AuthenticatorToken[USER]](id)
+  }
 
-  override def delete(token: AuthenticatorToken) = {
+  override def delete(token: AuthenticatorToken[USER]) = {
     Cache.remove(token.id)
     Success(Unit)
   }
 }
 
-object LocalCacheAuthenticator extends Authenticator {
+/*
+class LocalCacheAuthenticator[USER <: UsingID] extends Authenticator {
   override val cookieIdGen = DefaultCookieIdGenerator
   override val store =  LocalCacheAuthenticationStore
 }
+*/

@@ -1,8 +1,9 @@
 package reactivesecurity.core
 
+import reactivesecurity.core.User.UsingID
 import scalaz.{Failure, Success, Validation}
 
-import reactivesecurity.core.std.{UserServiceFailure, AuthenticationServiceFailure, AuthenticationFailure}
+import reactivesecurity.core.Failures._
 import org.joda.time.DateTime
 import play.api.mvc.{AnyContent, Request, RequestHeader, Cookie}
 import play.Play
@@ -14,13 +15,19 @@ trait CookieIdGenerator {
   def generate(): String
 }
 
-trait AuthenticatorStore {
-  def save(token: AuthenticatorToken): Validation[Error, Unit]
-  def find(id: String): Option[AuthenticatorToken]
-  def delete(token: AuthenticatorToken): Validation[Error, Unit]
+trait AuthenticatorStore[USER <: UsingID] {
+  def save(token: AuthenticatorToken[USER]): Validation[Error, Unit]
+  def find(id: String): Option[AuthenticatorToken[USER]]
+  def delete(token: AuthenticatorToken[USER]): Validation[Error, Unit]
 }
 
-case class AuthenticatorToken(id: String, uid: String, creation: DateTime, lastUsed: DateTime, expiration: DateTime) {
+case class AuthenticatorToken[USER <: UsingID](
+  id: String,
+  uid: USER#ID,
+  creation: DateTime,
+  lastUsed: DateTime,
+  expiration: DateTime) {
+
   def toCookie: Cookie = {
     import CookieParameters._
     Cookie(
@@ -28,32 +35,32 @@ case class AuthenticatorToken(id: String, uid: String, creation: DateTime, lastU
       id,
       Some(3600*10), //TODO -- Use expiration?
       cookiePath,
-      None
-      //secure = cookieSecure,
-      //httpOnly =  cookieHttpOnly
+      None,
+      //secure = true,
+      httpOnly =  true
     )
   }
 }
 
-abstract class Authenticator {
+abstract class Authenticator[USER <: UsingID] {
   val cookieIdGen: CookieIdGenerator
-  val store: AuthenticatorStore
+  val store: AuthenticatorStore[USER]
 
   val todo_absoluteTimeout = 5
 
-  def find(request: RequestHeader):Option[AuthenticatorToken] =
-    request.cookies.get(CookieParameters.cookieName).fold(None: Option[AuthenticatorToken])(t => store.find(t.value))
+  def find(request: RequestHeader):Option[AuthenticatorToken[USER]] = {
+    request.cookies.get(CookieParameters.cookieName).fold(None: Option[AuthenticatorToken[USER]])(t => store.find(t.value))
+  }
 
-  def create(userIdString: String): Validation[AuthenticationFailure, AuthenticatorToken] = {
+  def create(uid: USER#ID): Validation[AuthenticationFailure, AuthenticatorToken[USER]] = {
     val id = cookieIdGen.generate()
     val now = DateTime.now()
     val expirationDate = now.plusMinutes(todo_absoluteTimeout)
-    val token = AuthenticatorToken(id, userIdString, now, now, expirationDate)
+    val token = AuthenticatorToken(id, uid, now, now, expirationDate)
     store.save(token).fold( e => Failure(AuthenticationServiceFailure(e)), _ => Success(token) )
   }
 
-  def delete(token: AuthenticatorToken) = store.delete(token)
-
+  def delete(token: AuthenticatorToken[USER]) = store.delete(token)
 }
 
 object CookieParameters {

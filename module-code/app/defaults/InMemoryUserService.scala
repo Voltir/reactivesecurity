@@ -1,13 +1,10 @@
 package reactivesecurity.defaults
 
-import scala.collection._
 import scala.concurrent._
-import scalaz._
 
-import reactivesecurity.core.User.{StringAsID, UsingID, UserService}
-import reactivesecurity.core.std.{UserServiceFailure, IdentityNotFound}
+import reactivesecurity.core.User.{UsingID, UserService}
 
-abstract class InMemoryUserService[USER <: UsingID] extends UserService[USER] { this: StringAsID[USER] =>
+abstract class InMemoryUserService[USER <: UsingID] extends UserService[USER] { /*this: StringAsID[USER] =>*/
 
   private var users: scala.collection.concurrent.Map[USER#ID,USER] =
     new scala.collection.concurrent.TrieMap[USER#ID,USER]()
@@ -26,5 +23,4 @@ abstract class InMemoryUserService[USER <: UsingID] extends UserService[USER] { 
     users += (user.id -> user)
     future { true }
   }
-
 }

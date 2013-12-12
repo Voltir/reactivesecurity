@@ -3,7 +3,7 @@ package reactivesecurity.controllers
 import reactivesecurity.core._
 import reactivesecurity.core.providers._
 import reactivesecurity.core.User.{UserService, UsingID}
-import reactivesecurity.core.std.{OAuth2NoAccessCode, OauthNoVerifier, AuthenticationFailure}
+import reactivesecurity.core.Failures._
 import reactivesecurity.core.Authentication.AuthenticationService
 import reactivesecurity.core.Password.PasswordService
 
@@ -29,7 +29,7 @@ abstract class Login[USER <: UsingID] extends Controller {
   val userService: UserService[USER]
   val passService: PasswordService[USER]
 
-  val authenticator: Authenticator
+  val authenticator: Authenticator[USER]
 
   def onUnauthorized(request: RequestHeader): SimpleResult
   def onLoginSucceeded(request: RequestHeader): SimpleResult
@@ -97,11 +97,11 @@ abstract class Login[USER <: UsingID] extends Controller {
   def handleOAuth1[A](p: OAuth1Provider[USER])(implicit request: Request[A]): Future[SimpleResult] = {
     val callback = RoutesHelper.authenticate(p.id).absoluteURL()
     handleGenericAuth(p) { fail => fail match {
-      case _: OauthNoVerifier => p.maybeService.map {
+      case OauthNoVerifier => p.maybeService.map {
         service => oauth1RetrieveRequestToken(service,callback)
         }.getOrElse {
           if ( Logger.isDebugEnabled ) {
-            Logger.debug(s"[securesocial] Error using Oauth Service: ${p.id}")
+            Logger.debug(s"[reactivesecurity] Error using Oauth Service: ${p.id}")
           }
           onUnauthorized(request)
         }
@@ -112,7 +112,7 @@ abstract class Login[USER <: UsingID] extends Controller {
   def handleOAuth2[A](p: OAuth2Provider[USER])(implicit request: Request[A]): Future[SimpleResult] = {
     val callback = RoutesHelper.authenticate(p.id).absoluteURL()
     handleGenericAuth(p) { fail => fail match {
-      case _: OAuth2NoAccessCode => p.maybeSettings.map {
+      case OAuth2NoAccessCode => p.maybeSettings.map {
         settings => oauth2RetrieveAccessCode(settings,callback)
       }.getOrElse(onUnauthorized(request))
       case _ => onUnauthorized(request)
@@ -156,7 +156,7 @@ abstract class Login[USER <: UsingID] extends Controller {
     if ( Logger.isDebugEnabled ) {
       Logger.debug("[reactivesecurity] user logged in : [" + user + "]")
     }
-    authenticator.create(user.id.toString) match {
+    authenticator.create(user.id) match {
       case Failure(_) => onUnauthorized(request)
       case Success(token) => onLoginSucceeded(request).withCookies(token.toCookie)
     }

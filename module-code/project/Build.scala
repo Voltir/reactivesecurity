@@ -5,14 +5,13 @@ import play.Project._
 object ApplicationBuild extends Build {
 
   val appName         = "reactivesecurity"
-  val appVersion      = "1.2-SNAPSHOT"
+  val appVersion      = "1.2.1-SNAPSHOT"
 
   val appDependencies = Seq(
     cache,
     "org.scalaz" %% "scalaz-core" % "7.0.3",
     "org.mindrot" % "jbcrypt" % "0.3m"
   )
-
 
   val main = play.Project(appName, appVersion, appDependencies).settings(
     resolvers ++= Seq(
@@ -23,5 +22,4 @@ object ApplicationBuild extends Build {
       "Github Pages", new File("/home/jobhive/publish/reactivesecurity"))
     ) 
   )
-
 }

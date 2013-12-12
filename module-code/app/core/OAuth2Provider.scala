@@ -25,7 +25,7 @@ import play.api.mvc.{Call, Results, Result, Request}
 
 
 import reactivesecurity.core.Authentication.AuthenticationService
-import reactivesecurity.core.std.{OauthFailure, OAuth2NoAccessCode, AuthenticationFailure}
+import reactivesecurity.core.Failures._
 import reactivesecurity.core.User.UsingID
 import scala.concurrent.{Future, future}
 import concurrent.ExecutionContext.Implicits.global
@@ -100,21 +100,7 @@ abstract class OAuth2Provider[USER <: UsingID] extends AuthenticationService[Req
   }
 
   override def authenticate(credentials: Request[_]): Future[Validation[AuthenticationFailure,USER]] = {
-    println("!!!################################")
-    println(credentials.queryString)
-    /*
-    credentials.queryString.get(OAuth2Constants.Error).flatMap(_.headOption).map( error => {
-      error match {
-        case OAuth2Constants.AccessDenied => throw new AccessDeniedException()
-        case _ =>
-          Logger.error("[securesocial] error '%s' returned by the authorization server. Provider type is %s".format(error, id))
-          throw new AuthenticationException()
-      }
-      throw new AuthenticationException()
-    })
-    */
     credentials.queryString.get(OAuth2Constants.Code).flatMap(_.headOption).map { code =>
-      println("YAY CODE: "+code)
       val accessToken: Option[Future[OAuth2Info]] = for {
         settings <- maybeSettings
         sessionId <- credentials.session.get("sid");
@@ -141,7 +127,7 @@ abstract class OAuth2Provider[USER <: UsingID] extends AuthenticationService[Req
       }}.getOrElse(future { Failure(OauthFailure("Invalid OAuth2 Access Token"))} )
 
       //future { Failure(OauthFailure("WIP")) }
-    }.getOrElse(future { Failure(OAuth2NoAccessCode()) })
+    }.getOrElse(future { Failure(OAuth2NoAccessCode) })
     /*
     credentials.queryString.get(OAuth2Constants.Code).flatMap(_.headOption) match {
       case Some(code) =>

@@ -1,12 +1,9 @@
 package reactivesecurity.core
 
-import reactivesecurity.core.User.{UserService, UsingID}
-import scalaz.{Success, Failure, Validation}
-import reactivesecurity.core.Authentication.InputValidator
-import concurrent.{ExecutionContext, Future}
-import play.api.mvc.RequestHeader
 
-object std {
+import reactivesecurity.core.User.UsingID
+
+object Failures {
 
   trait AuthenticationFailure
 
@@ -16,28 +13,33 @@ object std {
 
   case class IdentityNotFound[USER <: UsingID](userid: USER#ID) extends UserServiceFailure
 
-  case class ValidationFailure() extends UserServiceFailure
+  case object ValidationFailure extends UserServiceFailure
 
-  case class InvalidPassword() extends AuthenticationFailure
+  case object InvalidPassword extends AuthenticationFailure
 
-  case class CredentialsNotFound() extends AuthenticationFailure
+  case object CredentialsNotFound extends AuthenticationFailure
 
   case class OauthFailure(reason: String) extends AuthenticationFailure
 
-  case class OauthNoVerifier() extends AuthenticationFailure
+  case object OauthNoVerifier extends AuthenticationFailure
 
-  case class OAuth2NoAccessCode() extends AuthenticationFailure
+  case object OAuth2NoAccessCode extends AuthenticationFailure
 
+  trait AuthorizationFailure
+
+  case object NotAuthorized extends AuthorizationFailure
   //Move this to "play" dir
+  /*
   abstract class AuthenticatedInputValidator[USER <: UsingID] extends InputValidator[RequestHeader,USER,AuthenticationFailure] {
     val users: UserService[USER]
     val authenticator: Authenticator
 
     override def validateInput(in: RequestHeader)(implicit ec: ExecutionContext): Future[Validation[UserServiceFailure,USER]] = {
-      val fail: Validation[UserServiceFailure,USER] = Failure(ValidationFailure())
+      val fail: Validation[UserServiceFailure,USER] = Failure(ValidationFailure)
       authenticator.find(in).fold(Future(fail)) {
         token => users.find(users.strAsId(token.uid)).map(_.fold(fail)(Success(_)))
       }
     }
   }
+  */
 }

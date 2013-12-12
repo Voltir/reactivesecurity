@@ -4,13 +4,14 @@ import play.api.mvc._
 
 import scala.concurrent.{Future, ExecutionContext}
 import reactivesecurity.core.Authentication.AsyncAuthentication
-import reactivesecurity.core.std.AuthenticationFailure
+import reactivesecurity.core.Failures.AuthenticationFailure
 import reactivesecurity.core.User.UsingID
 import play.api.libs.iteratee.{Iteratee, Enumerator}
 import play.api.mvc.WebSocket.FrameFormatter
 
-trait Authentication[USER <: UsingID] extends AsyncAuthentication[RequestHeader,SimpleResult,USER,AuthenticationFailure] {
+trait AuthenticationAction[USER <: UsingID] extends AsyncAuthentication[RequestHeader,SimpleResult,USER,AuthenticationFailure] {
   import ExecutionContext.Implicits.global
+
   class AuthenticatedRequest[A](val user: USER, request: Request[A]) extends WrappedRequest[A](request)
 
   case class Authenticated[A](action: Action[A]) extends Action[A] {
@@ -28,7 +29,7 @@ trait Authentication[USER <: UsingID] extends AsyncAuthentication[RequestHeader,
   object Authenticated extends ActionBuilder[AuthenticatedRequest] {
     override def invokeBlock[A](request: Request[A], block: (AuthenticatedRequest[A]) => Future[SimpleResult]) = {
       val ec = implicitly[ExecutionContext]
-      authentication((user:USER) => block(new AuthenticatedRequest[A](user,request)))(ec)(request)
+      authentication(user => block(new AuthenticatedRequest[A](user,request)))(ec)(request)
     }
     override def composeAction[A](action: Action[A]) = new Authenticated(action)
   }

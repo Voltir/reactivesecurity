@@ -3,9 +3,7 @@ package reactivesecurity.core.providers
 import reactivesecurity.controllers.LoginForm
 import reactivesecurity.core.Authentication.AuthenticationService
 import reactivesecurity.core.Password.PasswordService
-import reactivesecurity.core.std._
-import reactivesecurity.core.std.AuthenticationServiceFailure
-import reactivesecurity.core.std.IdentityNotFound
+import reactivesecurity.core.Failures._
 import scalaz.{Success, Failure, Validation}
 import reactivesecurity.core.User.{UserService, UsingID}
 import scala.concurrent.{ExecutionContext, Future}
@@ -13,8 +11,6 @@ import ExecutionContext.Implicits.global
 import core.Credentials.PasswordHashValidator
 import play.api.mvc.{AnyContent, Request}
 import concurrent.future
-import scalaz.Success
-import scalaz.Failure
 import play.api.Logger
 
 case class IdPass(id: String, password: String)

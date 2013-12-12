@@ -19,7 +19,7 @@ package securesocial.core.providers
 import play.api.libs.ws.WS
 import play.api.{Application, Logger}
 import play.api.libs.json.JsObject
-import reactivesecurity.core.std.{OauthFailure, AuthenticationFailure}
+import reactivesecurity.core.Failures._
 import reactivesecurity.core.User.UsingID
 import reactivesecurity.core.{OAuth1Info, ThisDoesNotBelongHere, OAuth2Provider}
 import securesocial.core._

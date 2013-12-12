@@ -26,7 +26,7 @@ import play.api.mvc.Results.{Redirect,Ok}
 import Play.current
 import reactivesecurity.core.Authentication.AuthenticationService
 
-import reactivesecurity.core.std._
+import reactivesecurity.core.Failures._
 
 import reactivesecurity.core.User.{UserService, UsingID}
 import scala.concurrent.{Future, future}
@@ -97,7 +97,7 @@ abstract class OAuth1Provider[USER <: UsingID] extends AuthenticationService[Req
         }
       }
       result.getOrElse(future { fail("Invalid Provider or RequestToken") })
-    }.getOrElse(future { Failure(OauthNoVerifier()) })
+    }.getOrElse(future { Failure(OauthNoVerifier) })
   }
 }
 
