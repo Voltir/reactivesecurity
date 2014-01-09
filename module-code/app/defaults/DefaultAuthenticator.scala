@@ -36,10 +36,3 @@ class LocalCacheAuthenticationStore[USER <: UsingID] extends AuthenticatorStore[
     Success(Unit)
   }
 }
-
-/*
-class LocalCacheAuthenticator[USER <: UsingID] extends Authenticator {
-  override val cookieIdGen = DefaultCookieIdGenerator
-  override val store =  LocalCacheAuthenticationStore
-}
-*/

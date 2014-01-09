@@ -6,7 +6,7 @@ object User {
 
   trait UsingID {
     type ID
-    val id: ID
+    def identity: ID
   }
 
   trait UserProvider[+USER] {

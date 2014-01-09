@@ -20,7 +20,7 @@ abstract class InMemoryUserService[USER <: UsingID] extends UserService[USER] { 
   }
 
   override def save(user: USER)(implicit ec: ExecutionContext): Future[Boolean] = {
-    users += (user.id -> user)
+    users += (user.identity -> user)
     future { true }
   }
 }

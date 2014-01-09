@@ -123,8 +123,6 @@ abstract class Login[USER <: UsingID] extends Controller {
     p.authenticate(request).map { _.fold(
       fail => onFail(fail),
       (user: USER) => {
-        //super hacks... really really want to fix this later...
-        userService.save(user)
         completeAuthentication(user,session)
       }
     )}
@@ -156,7 +154,7 @@ abstract class Login[USER <: UsingID] extends Controller {
     if ( Logger.isDebugEnabled ) {
       Logger.debug("[reactivesecurity] user logged in : [" + user + "]")
     }
-    authenticator.create(user.id) match {
+    authenticator.create(user.identity) match {
       case Failure(_) => onUnauthorized(request)
       case Success(token) => onLoginSucceeded(request).withCookies(token.toCookie)
     }
