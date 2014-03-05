@@ -11,7 +11,7 @@ object Failures {
 
   case class AuthenticationServiceFailure[A](underlyingError: A) extends AuthenticationFailure
 
-  case class IdentityNotFound[USER <: UsingID](userid: USER#ID) extends UserServiceFailure
+  case class IdentityNotFound[USER <: UsingID](info: String) extends UserServiceFailure
 
   case object ValidationFailure extends UserServiceFailure
 
@@ -28,18 +28,4 @@ object Failures {
   trait AuthorizationFailure
 
   case object NotAuthorized extends AuthorizationFailure
-  //Move this to "play" dir
-  /*
-  abstract class AuthenticatedInputValidator[USER <: UsingID] extends InputValidator[RequestHeader,USER,AuthenticationFailure] {
-    val users: UserService[USER]
-    val authenticator: Authenticator
-
-    override def validateInput(in: RequestHeader)(implicit ec: ExecutionContext): Future[Validation[UserServiceFailure,USER]] = {
-      val fail: Validation[UserServiceFailure,USER] = Failure(ValidationFailure)
-      authenticator.find(in).fold(Future(fail)) {
-        token => users.find(users.strAsId(token.uid)).map(_.fold(fail)(Success(_)))
-      }
-    }
-  }
-  */
 }

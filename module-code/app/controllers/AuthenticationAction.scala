@@ -8,11 +8,14 @@ import reactivesecurity.core.Failures.AuthenticationFailure
 import reactivesecurity.core.User.UsingID
 import play.api.libs.iteratee.{Iteratee, Enumerator}
 import play.api.mvc.WebSocket.FrameFormatter
+import scalaz.Success
 
 trait AuthenticationAction[USER <: UsingID] extends AsyncAuthentication[RequestHeader,SimpleResult,USER,AuthenticationFailure] {
   import ExecutionContext.Implicits.global
 
-  class AuthenticatedRequest[A](val user: USER, request: Request[A]) extends WrappedRequest[A](request)
+  case class AuthenticatedRequest[A](val user: USER, request: Request[A]) extends WrappedRequest[A](request)
+
+  case class MaybeAuthenticatedRequest[A](val maybeUser: Option[USER], request: Request[A]) extends WrappedRequest[A](request)
 
   case class Authenticated[A](action: Action[A]) extends Action[A] {
     def apply(request: Request[A]): Future[SimpleResult] = {
@@ -41,6 +44,15 @@ trait AuthenticationAction[USER <: UsingID] extends AsyncAuthentication[RequestH
         fail => concurrent.future { (foo,Enumerator.eof) },
         user => f(request)(user)
       )
+    }
+  }
+
+  object MaybeAuthenticated extends ActionBuilder[MaybeAuthenticatedRequest] {
+    def invokeBlock[A](request: Request[A], block: MaybeAuthenticatedRequest[A] => Future[SimpleResult]) = {
+      inputValidator.validateInput(request).flatMap {
+        case Success(user) => block(MaybeAuthenticatedRequest(Some(user),request))
+        case _ => block(MaybeAuthenticatedRequest(None,request))
+      }
     }
   }
 }

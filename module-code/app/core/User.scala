@@ -6,7 +6,7 @@ object User {
 
   trait UsingID {
     type ID
-    def identity: ID
+    val id: ID
   }
 
   trait UserProvider[+USER] {
@@ -14,14 +14,7 @@ object User {
   }
 
   trait UserService[USER <: UsingID] {
-    /*this: StringAsID[USER] =>*/
     def find(id: USER#ID)(implicit ec: ExecutionContext): Future[Option[USER]]
-
-    //Ignore invalid ids
-    def findMany(ids: List[USER#ID])(implicit ec: ExecutionContext): Future[List[USER]]
-
-    def idFromEmail(email: String): USER#ID
-
-    def save(user: USER)(implicit ec: ExecutionContext): Future[Boolean]
+    def findByEmail(email: String)(implicit ec: ExecutionContext): Future[Option[USER]]
   }
 }

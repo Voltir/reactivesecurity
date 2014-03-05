@@ -28,7 +28,9 @@ object Authentication {
         inputValidator.validateInput(in).flatMap { validation =>
           validation.fold(
             fail = { f => authFailureHandler.onAuthenticationFailure(in,f) },
-            succ = { user => block(user) }
+            succ = { user =>
+              block(user)
+            }
           )
         }
       }

@@ -20,9 +20,8 @@ class UserPasswordProvider[USER <: UsingID](users: UserService[USER], passServic
   private val validator = new PasswordHashValidator[USER] { override val passwordService = passService }
 
   override def authenticate(credentials: IdPass): Future[Validation[AuthenticationFailure,USER]] = {
-    val id = users.idFromEmail(credentials.id)
-    users.find(id).flatMap { _.fold {
-      val fail: Validation[AuthenticationFailure,USER] = Failure(AuthenticationServiceFailure(IdentityNotFound(id)))
+    users.findByEmail(credentials.id).flatMap { _.fold {
+      val fail: Validation[AuthenticationFailure,USER] = Failure(AuthenticationServiceFailure(IdentityNotFound(credentials.id)))
       future { fail }
     } { user =>validator.validate(user,credentials) } }
   }
@@ -36,13 +35,12 @@ class UserPasswordFormProvider[USER <: UsingID](users: UserService[USER], passSe
     val fail: Validation[AuthenticationFailure,USER] = Failure(AuthenticationServiceFailure(OauthFailure("Oauth Failed to Authenticate")))
     LoginForm.loginForm.bindFromRequest()(credentials).fold(
       errors => future { fail },
-      { case (id: String, password: String) =>
-        val uid = users.idFromEmail(id)
-        users.find(uid).flatMap { _.fold {
-          val fail: Validation[AuthenticationFailure,USER] = Failure(AuthenticationServiceFailure(IdentityNotFound(uid)))
-          Logger.debug("[reactivesecurity] Userpass Authentication Failed -- Id Not Found: "+uid)
+      { case (email: String, password: String) =>
+        users.findByEmail(email).flatMap { _.fold {
+          val fail: Validation[AuthenticationFailure,USER] = Failure(AuthenticationServiceFailure(IdentityNotFound(email)))
+          Logger.debug("[reactivesecurity] Userpass Authentication Failed -- Email Not Found: "+email)
           future { fail }
-          } { user => validator.validate(user,IdPass(id,password)) }
+          } { user => validator.validate(user,IdPass(email,password)) }
         }
       }
     )

@@ -15,9 +15,9 @@ abstract class AuthenticatedInputValidator[USER <: UsingID] extends InputValidat
 
   override def validateInput(in: RequestHeader)(implicit ec: ExecutionContext): Future[Validation[UserServiceFailure,USER]] = {
     val fail: Validation[UserServiceFailure,USER] = Failure(ValidationFailure)
-    authenticator.find(in).fold(Future(fail)) {
-      //token => users.find(users.strAsId(token.uid)).map(_.fold(fail)(Success(_)))
-      token => users.find(token.uid).map(_.fold(fail)(Success(_)))
+    authenticator.find(in).flatMap {
+      case Some(token) => users.find(token.uid).map(_.fold(fail)(Success(_)))
+      case _ => Future(fail)
     }
   }
 }

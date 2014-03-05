@@ -9,6 +9,8 @@ import play.api.cache.Cache
 import play.api.Play.current
 
 import reactivesecurity.core.{AuthenticatorToken, AuthenticatorStore, CookieIdGenerator, Authenticator}
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object DefaultCookieIdGenerator extends CookieIdGenerator {
   val random = new SecureRandom()
@@ -22,17 +24,18 @@ object DefaultCookieIdGenerator extends CookieIdGenerator {
 }
 
 class LocalCacheAuthenticationStore[USER <: UsingID] extends AuthenticatorStore[USER] {
-  override def save(token: AuthenticatorToken[USER]): Validation[Error, Unit] = {
+  override def save(token: AuthenticatorToken[USER]): Future[Validation[Error, Unit]] = {
     Cache.set(token.id,token)
-    Success(Unit)
+    Future(Success(Unit))
   }
 
-  override def find(id: String): Option[AuthenticatorToken[USER]] = {
-    Cache.getAs[AuthenticatorToken[USER]](id)
+  override def find(id: String): Future[Option[AuthenticatorToken[USER]]] = {
+    val result = Cache.getAs[AuthenticatorToken[USER]](id)
+    Future(result)
   }
 
   override def delete(token: AuthenticatorToken[USER]) = {
     Cache.remove(token.id)
-    Success(Unit)
+    Future(Success(Unit))
   }
 }

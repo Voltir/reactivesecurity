@@ -23,30 +23,32 @@ import java.net.URLEncoder
 import securesocial.core.providers.GoogleProvider
 import core.util.RoutesHelper
 
-
-
-abstract class Login[USER <: UsingID] extends Controller {
+abstract class Login[USER <: UsingID] extends Controller with AuthenticationAction[USER] {
   val userService: UserService[USER]
   val passService: PasswordService[USER]
-
   val authenticator: Authenticator[USER]
 
   def onUnauthorized(request: RequestHeader): SimpleResult
   def onLoginSucceeded(request: RequestHeader): SimpleResult
   def onLogoutSucceeded(request: RequestHeader): SimpleResult
+  def onStillLoggedIn(request: RequestHeader): SimpleResult
   def getLoginPage(request: RequestHeader): SimpleResult
 
   def userFromOauthData(todo: ThisDoesNotBelongHere): USER
 
-  def login = Action { implicit request =>
-    withRefererAsOriginalUrl(getLoginPage(request))
+  def login = MaybeAuthenticated { implicit request =>
+    request.maybeUser.map { user =>
+      onStillLoggedIn(request)
+    } getOrElse {
+      withRefererAsOriginalUrl(getLoginPage(request))
+    }
   }
 
-  def logout = Action { implicit request =>
-    authenticator.find(request).map { token =>
+  def logout = Action.async { implicit request =>
+    authenticator.find(request).map { _.map { token =>
       authenticator.delete(token)
       onLogoutSucceeded(request).discardingCookies(DiscardingCookie(CookieParameters.cookieName))
-    }.getOrElse(getLoginPage(request))
+    }.getOrElse(getLoginPage(request)) }
   }
 
   def authenticate(provider: String) = handleAuth(provider)
@@ -90,7 +92,6 @@ abstract class Login[USER <: UsingID] extends Controller {
       Logger.debug("[reactivesecurity] authorizationUrl = %s".format(settings.authorizationUrl))
       Logger.debug("[reactivesecurity] redirecting to: [%s]".format(url))
     }
-    //Redirect( url ).withSession(request.session + (IdentityProvider.SessionId, sessionId))
     Redirect( url ).withSession(request.session + ("sid", sessionId))
   }
 
@@ -120,8 +121,8 @@ abstract class Login[USER <: UsingID] extends Controller {
   }
 
   def handleGenericAuth[A](p: AuthenticationService[Request[A],USER,AuthenticationFailure])(onFail: AuthenticationFailure => SimpleResult)(implicit request: Request[A]): Future[SimpleResult] = {
-    p.authenticate(request).map { _.fold(
-      fail => onFail(fail),
+    p.authenticate(request).flatMap { _.fold(
+      fail => Future(onFail(fail)),
       (user: USER) => {
         completeAuthentication(user,session)
       }
@@ -150,13 +151,15 @@ abstract class Login[USER <: UsingID] extends Controller {
     }
   }
 
-  def completeAuthentication(user: USER, session: Session)(implicit request: RequestHeader): SimpleResult = {
+  def completeAuthentication(user: USER, session: Session)(implicit request: RequestHeader): Future[SimpleResult] = {
     if ( Logger.isDebugEnabled ) {
       Logger.debug("[reactivesecurity] user logged in : [" + user + "]")
     }
-    authenticator.create(user.identity) match {
+    val secured = play.api.Play.current.configuration.getString("https.port").isDefined
+    val expire = org.joda.time.Duration.standardHours(12)
+    authenticator.create(user.id, expire).map {
       case Failure(_) => onUnauthorized(request)
-      case Success(token) => onLoginSucceeded(request).withCookies(token.toCookie)
+      case Success(token) => onLoginSucceeded(request).withCookies(token.toCookie(secured))
     }
   }
 }

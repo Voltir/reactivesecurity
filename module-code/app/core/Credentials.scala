@@ -22,7 +22,7 @@ object Credentials {
     val passwordService: PasswordService[USER]
 
     override def validate(user: USER, credential: IdPass)(implicit ec: ExecutionContext): Future[Validation[AuthenticationFailure,USER]] = {
-      passwordService.find(user.identity).map { _.map { storedPass =>
+      passwordService.find(user.id).map { _.map { storedPass =>
         if(passwordService.hasher.matches(storedPass,credential.password)) Success(user)
         else Failure(InvalidPassword)
       }.getOrElse(Failure(CredentialsNotFound))
