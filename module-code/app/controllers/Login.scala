@@ -124,7 +124,8 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
     p.authenticate(request).flatMap { _.fold(
       fail => Future(onFail(fail)),
       (user: USER) => {
-        completeAuthentication(user,session)
+        //completeAuthentication(user,session)
+        completeAuthentication(user)(onLoginSucceeded(request))
       }
     )}
   }
@@ -151,7 +152,7 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
     }
   }
 
-  def completeAuthentication(user: USER, session: Session)(implicit request: RequestHeader): Future[SimpleResult] = {
+  def completeAuthentication(user: USER)(onSuccess: SimpleResult)(implicit request: RequestHeader): Future[SimpleResult] = {
     if ( Logger.isDebugEnabled ) {
       Logger.debug("[reactivesecurity] user logged in : [" + user + "]")
     }
@@ -159,7 +160,7 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
     val expire = org.joda.time.Duration.standardHours(12)
     authenticator.create(user.id, expire).map {
       case Failure(_) => onUnauthorized(request)
-      case Success(token) => onLoginSucceeded(request).withCookies(token.toCookie(secured))
+      case Success(token) => onSuccess.withCookies(token.toCookie(secured))
     }
   }
 }

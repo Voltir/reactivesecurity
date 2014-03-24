@@ -39,7 +39,8 @@ trait RegistrationTrait[USER <: UsingID] {
     !token.isExpired && token.isSignUp == isSignUp
   }
 
-  def createConfirmationToken(id: String, isSignUp: Boolean): RegistrationToken = {
+  //todo -- remove isSignUp :/
+  private def createConfirmationToken(id: String, isSignUp: Boolean): RegistrationToken = {
     val uuid = UUID.randomUUID.toString
     val now = DateTime.now()
     val token = RegistrationToken(

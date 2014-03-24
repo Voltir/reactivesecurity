@@ -77,5 +77,4 @@ object CookieParameters {
   lazy val cookieDomain = play.api.Play.application.configuration.getString(CookieDomainKey)
   lazy val absoluteTimeout = play.api.Play.application.configuration.getInt("reactivesecurity.cookie.timeout").getOrElse(defaultTimeout)
   lazy val absoluteTimeoutInSeconds = absoluteTimeout * 60
-
 }
