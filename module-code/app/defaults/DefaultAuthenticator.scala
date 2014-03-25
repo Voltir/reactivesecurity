@@ -1,5 +1,6 @@
 package reactivesecurity.defaults
 
+/*
 import java.security.SecureRandom
 import reactivesecurity.core.User.UsingID
 import scalaz._
@@ -39,3 +40,4 @@ class LocalCacheAuthenticationStore[USER <: UsingID] extends AuthenticatorStore[
     Future(Success(Unit))
   }
 }
+*/

@@ -45,7 +45,7 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
   }
 
   def logout = Action.async { implicit request =>
-    authenticator.find(request).map { _.map { token =>
+    authenticator.touch(request).map { _.map { token =>
       authenticator.delete(token)
       onLogoutSucceeded(request).discardingCookies(DiscardingCookie(CookieParameters.cookieName))
     }.getOrElse(getLoginPage(request)) }

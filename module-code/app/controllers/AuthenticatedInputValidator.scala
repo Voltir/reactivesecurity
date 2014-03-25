@@ -1,5 +1,6 @@
 package reactivesecurity.controllers
 
+/*
 import reactivesecurity.core.Authentication.InputValidator
 import reactivesecurity.core.Authenticator //merge??
 import reactivesecurity.core.User.{UserService, UsingID}
@@ -21,3 +22,4 @@ abstract class AuthenticatedInputValidator[USER <: UsingID] extends InputValidat
     }
   }
 }
+*/

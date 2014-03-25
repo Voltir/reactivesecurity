@@ -1,5 +1,43 @@
 package reactivesecurity.core
 
+import reactivesecurity.core.Failures.AuthenticationFailure
+import reactivesecurity.core.User.UsingID
+import play.api.mvc._
+import scala.concurrent.{Future, ExecutionContext}
+import scalaz.Validation
+import play.api.mvc.Cookie
+import org.joda.time.DateTime
+
+
+case class AuthenticatorToken[USER <: UsingID](
+  id: Array[Byte],
+  uid: USER#ID,
+  creation: DateTime,
+  lastUsed: DateTime,
+  expiration: DateTime) {
+
+  def toCookie(secure: Boolean): Cookie = ??? /*{
+    import CookieParameters._
+    Cookie(
+      cookieName,
+      id,
+      Some(CookieParameters.absoluteTimeoutInSeconds),
+      cookiePath,
+      None,
+      secure = secure,
+      httpOnly =  true
+    )
+  }
+  */
+}
+
+trait Authenticator[USER <: UsingID] {
+  def touch(request: RequestHeader)(implicit ec: ExecutionContext): Future[Option[AuthenticatorToken[USER]]]
+  def create(uid: USER#ID, expireIn: org.joda.time.Duration)(implicit ec: ExecutionContext): Future[Validation[AuthenticationFailure, AuthenticatorToken[USER]]]
+  def delete(token: AuthenticatorToken[USER])(implicit ec: ExecutionContext): Future[Validation[Error, Unit]]
+}
+
+/*
 import reactivesecurity.core.User.UsingID
 import scalaz.{Failure, Success, Validation}
 
@@ -66,6 +104,7 @@ abstract class Authenticator[USER <: UsingID] {
 
   def delete(token: AuthenticatorToken[USER])(implicit ec: ExecutionContext): Future[Validation[Error, Unit]] = store.delete(token)
 }
+*/
 
 object CookieParameters {
   import play.api.Play.current
