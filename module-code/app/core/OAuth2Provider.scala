@@ -24,7 +24,7 @@ import Play.current
 import play.api.mvc.{Call, Results, Result, Request}
 
 
-import reactivesecurity.core.Authentication.AuthenticationService
+import reactivesecurity.core.Authentication.AuthenticationValidator
 import reactivesecurity.core.Failures._
 import reactivesecurity.core.User.UsingID
 import scala.concurrent.{Future, future}
@@ -51,7 +51,7 @@ case class OAuth2Info(
 /**
  * Base class for all OAuth2 providers
  */
-abstract class OAuth2Provider[USER <: UsingID] extends AuthenticationService[Request[_],USER,AuthenticationFailure] {
+abstract class OAuth2Provider[USER <: UsingID] extends AuthenticationValidator[Request[_],USER,AuthenticationFailure] {
 
   val todoMaybeValidator: ThisDoesNotBelongHere => USER
 

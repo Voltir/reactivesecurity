@@ -1,10 +1,10 @@
 package reactivesecurity.controllers
 
 import reactivesecurity.core._
+import reactivesecurity.core.Authentication.AuthenticationValidator
 import reactivesecurity.core.providers._
 import reactivesecurity.core.User.{UserService, UsingID}
 import reactivesecurity.core.Failures._
-import reactivesecurity.core.Authentication.AuthenticationService
 import reactivesecurity.core.Password.PasswordService
 
 import play.api.mvc._
@@ -120,13 +120,10 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
     }}
   }
 
-  def handleGenericAuth[A](p: AuthenticationService[Request[A],USER,AuthenticationFailure])(onFail: AuthenticationFailure => SimpleResult)(implicit request: Request[A]): Future[SimpleResult] = {
+  def handleGenericAuth[A](p: AuthenticationValidator[Request[A],USER,AuthenticationFailure])(onFail: AuthenticationFailure => SimpleResult)(implicit request: Request[A]): Future[SimpleResult] = {
     p.authenticate(request).flatMap { _.fold(
       fail => Future(onFail(fail)),
-      (user: USER) => {
-        //completeAuthentication(user,session)
-        completeAuthentication(user)(onLoginSucceeded(request))
-      }
+      (user: USER) => completeAuthentication(user)(onLoginSucceeded(request))
     )}
   }
 
@@ -142,7 +139,9 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
 
   private def handleAuth(provider: String) = Action.async { implicit request =>
     Logger.debug("[reactivesecurity] Authorizing with provider: "+provider)
-    if(provider == "userpass") handleGenericAuth(userpass){ fail => onUnauthorized(request) }
+    if(provider == "userpass") {
+      handleGenericAuth(userpass){ fail => onUnauthorized(request) }
+    }
     else {
       oauth1providers.get(provider).map { oauth1 =>
         handleOAuth1(oauth1)
@@ -160,7 +159,7 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
     val expire = org.joda.time.Duration.standardHours(12)
     authenticator.create(user.id, expire).map {
       case Failure(_) => onUnauthorized(request)
-      case Success(token) => onSuccess.withCookies(token.toCookie(secured))
+      case Success(token) => onSuccess.withCookies(authenticator.cookies(token,secured))
     }
   }
 }

@@ -20,7 +20,7 @@ trait AuthorizedAction[USER <: UsingID] extends AuthenticationAction[USER] {
       Authenticated.invokeBlock[A](request, { authenticated =>
         authorized(authenticated.user).flatMap { authorized =>
           if(authorized) block(new AuthorizedRequest[A](authenticated.user,request))
-          else authFailureHandler.onAuthenticationFailure(request,ValidationFailure)
+          else authFailureHandler.onAuthenticationFailure(request)(ValidationFailure)
         }(ec)
       })
     }

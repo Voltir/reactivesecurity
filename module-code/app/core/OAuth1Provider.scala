@@ -24,7 +24,7 @@ import play.api.{ Logger, Play}
 import play.api.mvc.{AnyContent, Request, Result}
 import play.api.mvc.Results.{Redirect,Ok}
 import Play.current
-import reactivesecurity.core.Authentication.AuthenticationService
+import reactivesecurity.core.Authentication.AuthenticationValidator
 
 import reactivesecurity.core.Failures._
 
@@ -53,7 +53,7 @@ case class ThisDoesNotBelongHere(
   full: String,
   email: String)
 
-abstract class OAuth1Provider[USER <: UsingID] extends AuthenticationService[Request[_],USER,AuthenticationFailure] {
+abstract class OAuth1Provider[USER <: UsingID] extends AuthenticationValidator[Request[_],USER,AuthenticationFailure] {
 
   val todoMaybeValidator: ThisDoesNotBelongHere => USER
 

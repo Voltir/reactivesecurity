@@ -1,8 +1,8 @@
 package reactivesecurity.controllers
 
-/*
-import reactivesecurity.core.Authentication.InputValidator
-import reactivesecurity.core.Authenticator //merge??
+import reactivesecurity.core.Authenticator
+
+//merge??
 import reactivesecurity.core.User.{UserService, UsingID}
 import reactivesecurity.core.Failures._
 
@@ -16,10 +16,9 @@ abstract class AuthenticatedInputValidator[USER <: UsingID] extends InputValidat
 
   override def validateInput(in: RequestHeader)(implicit ec: ExecutionContext): Future[Validation[UserServiceFailure,USER]] = {
     val fail: Validation[UserServiceFailure,USER] = Failure(ValidationFailure)
-    authenticator.find(in).flatMap {
+    authenticator.touch(in).flatMap {
       case Some(token) => users.find(token.uid).map(_.fold(fail)(Success(_)))
       case _ => Future(fail)
     }
   }
 }
-*/
