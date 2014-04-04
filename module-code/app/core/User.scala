@@ -1,6 +1,8 @@
 package reactivesecurity.core
 
+import reactivesecurity.core.util.{OauthAccessToken, OauthUserData}
 import scala.concurrent.{ExecutionContext, Future}
+import play.api.libs.oauth.RequestToken
 
 object User {
 
@@ -15,6 +17,8 @@ object User {
 
   trait UserService[USER <: UsingID] {
     def find(id: USER#ID)(implicit ec: ExecutionContext): Future[Option[USER]]
-    def findByEmail(email: String)(implicit ec: ExecutionContext): Future[Option[USER]]
+    def findByProvider(provider: String, identifier: String)(implicit ec: ExecutionContext): Future[Option[USER]]
+    def oauthAccessToken(id: USER#ID, provider: String, token: OauthAccessToken): Unit
+    //def associateProvider(id: USER#ID, provider: String, identifier: String)(implicit ec: ExecutionContext): Future[Option[USER]]
   }
 }

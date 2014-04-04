@@ -2,6 +2,7 @@ package reactivesecurity.core
 
 
 import reactivesecurity.core.User.UsingID
+import reactivesecurity.core.util.OauthUserData
 
 object Failures {
 
@@ -14,6 +15,8 @@ object Failures {
   case class IdentityNotFound[USER <: UsingID](info: String) extends UserServiceFailure
 
   case object ValidationFailure extends UserServiceFailure
+
+  case class RequiresNewOauthUser(oauth: OauthUserData) extends AuthenticationFailure
 
   case object InvalidPassword extends AuthenticationFailure
 

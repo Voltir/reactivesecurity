@@ -3,6 +3,7 @@ package core.util
 import play.Play
 import play.api.mvc.Call
 import play.api.PlayException
+import reactivesecurity.core.User.UsingID
 
 object RoutesHelper {
 
@@ -19,14 +20,17 @@ object RoutesHelper {
       reverse
     }.getOrElse {
       throw exception
-      ""
     }
   }
+
   // ProviderController
   lazy val lc = Play.application().classloader().loadClass(getReverseControllerName())
   lazy val loginControllerMethods = lc.newInstance().asInstanceOf[{
     def authenticate(p: String): Call
+    def associateProviderCallback(provider: String): Call
   }]
 
   def authenticate(provider:String): Call = loginControllerMethods.authenticate(provider)
+
+  def associateProviderCallback(provider: String): Call = loginControllerMethods.associateProviderCallback(provider)
 }

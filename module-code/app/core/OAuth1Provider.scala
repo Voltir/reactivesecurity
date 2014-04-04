@@ -29,6 +29,7 @@ import reactivesecurity.core.Authentication.AuthenticationValidator
 import reactivesecurity.core.Failures._
 
 import reactivesecurity.core.User.{UserService, UsingID}
+import reactivesecurity.core.util.{OauthAuthenticationHelper, OauthUserData}
 import scala.concurrent.{Future, future}
 import concurrent.ExecutionContext.Implicits.global
 import scalaz.Validation
@@ -43,30 +44,23 @@ import play.api.libs.oauth.ConsumerKey
  * Base class for all OAuth1 providers
  */
 
-case class OAuth1Info(token: String, secret: String)
+//case class OAuth1Info(token: String, secret: String)
 
-case class ThisDoesNotBelongHere(
-  provider: String,
-  userid: String,
-  first: String,
-  last: String,
-  full: String,
-  email: String)
+abstract class OAuth1Provider[USER <: UsingID](userService: UserService[USER]) extends Provider[USER] {
 
-abstract class OAuth1Provider[USER <: UsingID] extends AuthenticationValidator[Request[_],USER,AuthenticationFailure] {
+  //val todoMaybeValidator: ThisDoesNotBelongHere => USER
+  //val helper: OauthAuthenticationHelper[USER]
 
-  val todoMaybeValidator: ThisDoesNotBelongHere => USER
+  def providerId: String
 
-  def id: String
-
-  def fill(oauthInfo: OAuth1Info, serviceInfo: ServiceInfo)(f: ThisDoesNotBelongHere => USER): Future[Validation[AuthenticationFailure,USER]]
+  def fill(accessToken: RequestToken, serviceInfo: ServiceInfo): Future[Option[OauthUserData]]
 
   val serviceInfo: Option[ServiceInfo]= for {
-    requestToken    <- Helper.loadProperty(OAuth1Provider.RequestTokenUrl,id)
-    accessToken     <- Helper.loadProperty(OAuth1Provider.AccessTokenUrl,id)
-    authorization   <- Helper.loadProperty(OAuth1Provider.AuthorizationUrl,id)
-    consumerKey     <- Helper.loadProperty(OAuth1Provider.ConsumerKey,id)
-    consumerSecret  <- Helper.loadProperty(OAuth1Provider.ConsumerSecret,id)
+    requestToken    <- ConfHelper.loadProperty(OAuth1Provider.RequestTokenUrl,providerId)
+    accessToken     <- ConfHelper.loadProperty(OAuth1Provider.AccessTokenUrl,providerId)
+    authorization   <- ConfHelper.loadProperty(OAuth1Provider.AuthorizationUrl,providerId)
+    consumerKey     <- ConfHelper.loadProperty(OAuth1Provider.ConsumerKey,providerId)
+    consumerSecret  <- ConfHelper.loadProperty(OAuth1Provider.ConsumerSecret,providerId)
   } yield {
     ServiceInfo(requestToken,accessToken,authorization, ConsumerKey(consumerKey, consumerSecret))
   }
@@ -85,11 +79,14 @@ abstract class OAuth1Provider[USER <: UsingID] extends AuthenticationValidator[R
         requestToken <- Cache.getAs[RequestToken](cacheKey)
       } yield {
         service.retrieveAccessToken(RequestToken(requestToken.token, requestToken.secret), verifier) match {
-          case Right(token) =>
-            // the Cache api does not have a remove method.  Just set the cache key and expire it after 1 second for
-            // now.
-            Cache.set(cacheKey, "", 1)
-            fill(OAuth1Info(token.token, token.secret),service.info)(todoMaybeValidator)
+          case Right(token) => {
+            Cache.remove(cacheKey)
+            val oauth = fill(RequestToken(token.token, token.secret),service.info)
+            oauth.flatMap { o =>
+              if(o.isDefined) OauthAuthenticationHelper.finishAuthenticate(providerId,userService,o.get)
+              else future { fail("Could not retrieve oauth data") }
+            }
+          }
           case Left(oauthException) => {
             Logger.error("[reactivesecurity] error retrieving access token", oauthException)
             future { fail(oauthException.getMessage) }
@@ -101,10 +98,11 @@ abstract class OAuth1Provider[USER <: UsingID] extends AuthenticationValidator[R
   }
 }
 
-object Helper {
+object ConfHelper {
   def propertyKey(id: String) = s"reactivesecurity.$id."
 
   def loadProperty(property: String, provider: String): Option[String] = {
+
     val result = play.api.Play.application.configuration.getString(propertyKey(provider) + property)
     if ( !result.isDefined ) {
       Logger.error("[reactivesecurity] Missing property " + property + " for provider " + provider)

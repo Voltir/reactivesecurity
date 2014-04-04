@@ -23,7 +23,8 @@ trait RegistrationTrait[USER <: UsingID] {
   val TOKEN_DURATION = 48
 
   def checkInitialRegistration(email: String): Future[InitialRegistrationResult] = {
-    userService.findByEmail(email).map { validation =>
+    //TODO -- make this trait more generic
+    userService.findByProvider("userpass",email).map { validation =>
       validation.map { user =>
         AlreadyRegistered(email)
       }.getOrElse {

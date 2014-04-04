@@ -26,12 +26,14 @@ import play.api.mvc.{Call, Results, Result, Request}
 
 import reactivesecurity.core.Authentication.AuthenticationValidator
 import reactivesecurity.core.Failures._
-import reactivesecurity.core.User.UsingID
+import reactivesecurity.core.User.{UserService, UsingID}
+import reactivesecurity.core.util.{OauthAuthenticationHelper, OauthUserData}
 import scala.concurrent.{Future, future}
 import concurrent.ExecutionContext.Implicits.global
 import scalaz.{Failure, Validation}
 import play.api.libs.ws.WS
 import play.api.libs.oauth.ServiceInfo
+import core.util.RoutesHelper
 
 /**
  * The Oauth2 details
@@ -51,26 +53,22 @@ case class OAuth2Info(
 /**
  * Base class for all OAuth2 providers
  */
-abstract class OAuth2Provider[USER <: UsingID] extends AuthenticationValidator[Request[_],USER,AuthenticationFailure] {
+abstract class OAuth2Provider[USER <: UsingID](userService: UserService[USER]) extends Provider[USER] {
 
-  val todoMaybeValidator: ThisDoesNotBelongHere => USER
+  def fill(accessToken: String): Future[Option[OauthUserData]]
 
-  def fill(accessToken: String)(f: ThisDoesNotBelongHere => USER): Future[Validation[AuthenticationFailure,USER]]
-
-  def id: String
+  override def providerId: String
 
   val maybeSettings = getSettings()
 
-  //def authMethod = AuthenticationMethod.OAuth2
-
   private def getSettings(): Option[OAuth2Settings] = {
     val result = for {
-      authorizationUrl  <- Helper.loadProperty(OAuth2Settings.AuthorizationUrl,id) ;
-      accessToken       <- Helper.loadProperty(OAuth2Settings.AccessTokenUrl,id) ;
-      clientId          <- Helper.loadProperty(OAuth2Settings.ClientId,id) ;
-      clientSecret      <- Helper.loadProperty(OAuth2Settings.ClientSecret,id)
+      authorizationUrl  <- ConfHelper.loadProperty(OAuth2Settings.AuthorizationUrl,providerId)
+      accessToken       <- ConfHelper.loadProperty(OAuth2Settings.AccessTokenUrl,providerId)
+      clientId          <- ConfHelper.loadProperty(OAuth2Settings.ClientId,providerId)
+      clientSecret      <- ConfHelper.loadProperty(OAuth2Settings.ClientSecret,providerId)
     } yield {
-      val maybeScope = Helper.loadProperty(OAuth2Settings.Scope,id)
+      val maybeScope = ConfHelper.loadProperty(OAuth2Settings.Scope,providerId)
       OAuth2Settings(authorizationUrl, accessToken, clientId, clientSecret, maybeScope)
     }
     result
@@ -83,7 +81,6 @@ abstract class OAuth2Provider[USER <: UsingID] extends AuthenticationValidator[R
       OAuth2Constants.GrantType -> Seq(OAuth2Constants.AuthorizationCode),
       OAuth2Constants.Code -> Seq(code),
       OAuth2Constants.RedirectUri -> Seq(callback)
-      //OAuth2Constants.RedirectUri -> Seq(RoutesHelper.authenticate(id).absoluteURL(IdentityProvider.sslEnabled))
     )
     WS.url(settings.accessTokenUrl).post(params).map { response =>
       val json = response.json
@@ -109,21 +106,17 @@ abstract class OAuth2Provider[USER <: UsingID] extends AuthenticationValidator[R
         currentState <- credentials.queryString.get(OAuth2Constants.State).flatMap(_.headOption)
         if originalState == currentState
       } yield {
-        //??????????????
-        implicit val req = credentials
-        lazy val conf = play.api.Play.current.configuration
-        lazy val pc = play.Play.application().classloader().loadClass("controllers.ReverseLogin")
-        lazy val loginMethods = pc.newInstance().asInstanceOf[{
-          def authenticate(p: String): Call
-        }]
-        //val callbackUrl = RoutesHelper.authenticate(id).absoluteURL(IdentityProvider.sslEnabled)
-        val callback = loginMethods.authenticate(id).absoluteURL()
-        //??????????????
-        getAccessToken(code,settings,callback)
+        val callback = RoutesHelper.authenticate(providerId).absoluteURL()(credentials)
+        getAccessToken(code,settings,callback)(credentials)
       }
 
       accessToken.map { _.flatMap { token =>
-        fill(token.accessToken)(todoMaybeValidator)
+        fill(token.accessToken)
+        val oauth = fill(token.accessToken)
+        oauth.flatMap { o =>
+          if(o.isDefined) OauthAuthenticationHelper.finishAuthenticate(providerId,userService,o.get)
+          else future { Failure(OauthFailure(("Could not retrieve oauth data"))) }
+        }
       }}.getOrElse(future { Failure(OauthFailure("Invalid OAuth2 Access Token"))} )
 
       //future { Failure(OauthFailure("WIP")) }

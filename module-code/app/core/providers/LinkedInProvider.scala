@@ -18,33 +18,34 @@ package reactivesecurity.core.providers
 
 import reactivesecurity.core.Failures._
 import reactivesecurity.core._
-import reactivesecurity.core.ThisDoesNotBelongHere
-import reactivesecurity.core.User.UsingID
+import reactivesecurity.core.User.{UserService, UsingID}
 import play.api.libs.ws.WS
 import play.api.Logger
 import LinkedInProvider._
+import reactivesecurity.core.util.{Oauth1, OauthAuthenticationHelper, OauthUserData}
 import scala.concurrent.Future
-import scalaz.Validation
 import concurrent.ExecutionContext.Implicits.global
 import play.api.libs.oauth.ServiceInfo
 import play.api.libs.oauth.RequestToken
 import play.api.libs.oauth.OAuthCalculator
-import scalaz.Success
-import scalaz.Failure
-import scala.Some
 
+class LinkedInProvider[USER <: UsingID](service: UserService[USER]) extends OAuth1Provider[USER](service) {
 
-class LinkedInProviderMK2[USER <: UsingID](f: ThisDoesNotBelongHere => USER) extends OAuth1Provider[USER] {
+  override def providerId = LinkedInProvider.LinkedIn
 
-  override def id = LinkedInProvider.LinkedIn
-
-  override val todoMaybeValidator = f
-
-  def fill(oauthInfo: OAuth1Info, serviceInfo: ServiceInfo)(f: ThisDoesNotBelongHere => USER): Future[Validation[AuthenticationFailure,USER]] = {
-    WS.url(LinkedInProvider.Api).sign(OAuthCalculator(serviceInfo.key,
-      RequestToken(oauthInfo.token, oauthInfo.secret))).get().map { response =>
-
+  def fill(accessToken: RequestToken, serviceInfo: ServiceInfo): Future[Option[OauthUserData]] = {
+    WS.url(LinkedInProvider.Api).sign(OAuthCalculator(serviceInfo.key,accessToken)).get().map { response =>
       val me = response.json
+      println("!!!!!!!!!!!!!!!!!!!!!!!!!!! LinkedInProvider")
+      println(me)
+
+      println("ServiceInfo: ",serviceInfo)
+      println("ServiceInfo.key: ",serviceInfo.key)
+      println("AccessToken: ", accessToken)
+      val wat = "https://api.linkedin.com/v1/people/~:(associations,educations,skills,three-past-positions,three-current-positions)?format=json&scope=r_fullprofile"
+      val foo = WS.url(wat).sign(OAuthCalculator(serviceInfo.key, accessToken)).get()
+      println(scala.concurrent.Await.result(foo,scala.concurrent.duration.Duration("10 seconds")).body)
+
       (me \ ErrorCode).asOpt[Int] match {
         case Some(error) => {
           val message = (me \ Message).asOpt[String]
@@ -54,7 +55,7 @@ class LinkedInProviderMK2[USER <: UsingID](f: ThisDoesNotBelongHere => USER) ext
             "Error retrieving information from LinkedIn. Error code: %s, requestId: %s, message: %s, timestamp: %s"
               format(error, message, requestId, timestamp)
           )
-          Failure(OauthFailure(message.getOrElse("Unknown Failure")))
+          None
         }
         case _ => {
           val userId = (me \ Id).as[String]
@@ -63,7 +64,7 @@ class LinkedInProviderMK2[USER <: UsingID](f: ThisDoesNotBelongHere => USER) ext
           val fullName = (me \ FormattedName).asOpt[String].getOrElse("")
           val email = (me \ Email).asOpt[String].getOrElse("")
           val avatarUrl = (me \ PictureUrl).asOpt[String]
-          Success(f(ThisDoesNotBelongHere(LinkedInProvider.LinkedIn,userId,firstName,lastName,fullName,email)))
+          Some(OauthUserData(LinkedInProvider.LinkedIn,userId,firstName,lastName,fullName,email,Oauth1(accessToken)))
         }
       }
     }

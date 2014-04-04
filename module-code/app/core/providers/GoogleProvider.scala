@@ -20,19 +20,17 @@ import play.api.libs.ws.WS
 import play.api.{Application, Logger}
 import play.api.libs.json.JsObject
 import reactivesecurity.core.Failures._
-import reactivesecurity.core.User.UsingID
-import reactivesecurity.core.{OAuth1Info, ThisDoesNotBelongHere, OAuth2Provider}
-import securesocial.core._
-import play.api.libs.oauth.ServiceInfo
+import reactivesecurity.core.User.{UserService, UsingID}
+import reactivesecurity.core.util.{Oauth2, OauthUserData}
+import reactivesecurity.core.OAuth2Provider
 import scala.concurrent.Future
 import concurrent.ExecutionContext.Implicits.global
-import scalaz.{Failure, Success, Validation}
 
 
 /**
  * A Google OAuth2 Provider
  */
-class GoogleProvider[USER <: UsingID](f: ThisDoesNotBelongHere => USER) extends OAuth2Provider[USER] {
+class GoogleProvider[USER <: UsingID](service: UserService[USER]) extends OAuth2Provider[USER](service) {
   val UserInfoApi = "https://www.googleapis.com/oauth2/v1/userinfo?access_token="
   val Error = "error"
   val Message = "message"
@@ -44,21 +42,19 @@ class GoogleProvider[USER <: UsingID](f: ThisDoesNotBelongHere => USER) extends 
   val Picture = "picture"
   val Email = "email"
 
-  override def id = GoogleProvider.Google
+  override def providerId = GoogleProvider.Google
 
-  override val todoMaybeValidator = f
-
-  //def fill(info: OAuth2Info)(f: ThisDoesNotBelongHere => USER): Future[Validation[AuthenticationFailure,USER]] = {
-  def fill(accessToken: String)(f: ThisDoesNotBelongHere => USER): Future[Validation[AuthenticationFailure,USER]] = {
+  def fill(accessToken: String):  Future[Option[OauthUserData]] = {
     WS.url(UserInfoApi + accessToken).get().map { response =>
       val me = response.json
       (me \ Error).asOpt[JsObject] match {
-        case Some(error) =>
+        case Some(error) => {
           val message = (error \ Message).asOpt[String]
           val errorType = ( error \ Type).asOpt[String]
           Logger.error("[securesocial] error retrieving profile information from Google. Error type = %s, message = %s"
             .format(errorType,message))
-          Failure(OauthFailure(message.getOrElse("Unknown Failure")))
+          None
+        }
         case _ => {
           val userId = (me \ Id).as[String]
           val firstName = (me \ GivenName).asOpt[String].getOrElse("")
@@ -66,7 +62,7 @@ class GoogleProvider[USER <: UsingID](f: ThisDoesNotBelongHere => USER) extends 
           val fullName = (me \ Name).asOpt[String].getOrElse("")
           val avatarUrl = ( me \ Picture).asOpt[String].getOrElse("")
           val email = ( me \ Email).asOpt[String].getOrElse("")
-          Success(f(ThisDoesNotBelongHere(GoogleProvider.Google,userId,firstName,lastName,fullName,email)))
+          Some(OauthUserData(GoogleProvider.Google,userId,firstName,lastName,fullName,email,Oauth2(accessToken)))
         }
       }
     }

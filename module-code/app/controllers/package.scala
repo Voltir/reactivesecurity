@@ -1,5 +1,7 @@
 package reactivesecurity
 
+import play.api.mvc.SimpleResult
+
 package object controllers {
 
   import play.api.mvc.{Request, Result}
@@ -7,7 +9,7 @@ package object controllers {
 
   import scalaz.Scalaz._
 
-  def withRefererAsOriginalUrl[A](result: Result)(implicit request: Request[A]): Result = {
+  def withRefererAsOriginalUrl[A](result: SimpleResult)(implicit request: Request[A]): SimpleResult = {
     val origUrl = "original-url"
     request.session.get(origUrl) match {
       // If there's already an original url recorded we keep it: e.g. if s.o. goes to
