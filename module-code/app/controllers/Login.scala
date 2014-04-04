@@ -63,36 +63,62 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
     }}
   }
 
+  lazy val providers: Map[String,Provider[USER]] = Map(
+    "userpass" -> UserPassword(userService,passService),
+    "linkedin" -> LinkedInProvider[USER](userService),
+    "google" -> GoogleProvider[USER](userService)
+  )
+
+  private def failure(implicit request: RequestHeader) = future { onUnauthorized(request) }
+
   def associateProvider(provider: String) = Authenticated { implicit request =>
     import play.api.Play.current
     val callback = RoutesHelper.associateProviderCallback(provider)
-    val linkedin = oauth1providers("linkedin")
-    Cache.set("temp",request.user.id)
-    linkedin.maybeService.map { oauth =>
-      oauth1RetrieveRequestToken(oauth,callback.absoluteURL())
-    }.getOrElse {
-      ServiceUnavailable
+    val associateKey = UUID.randomUUID().toString
+    Cache.set(associateKey,request.user.id,600)
+    providers.get(provider).flatMap {
+      //TODO -- in this case I think we can redirect directly to the associateProviderCallback and assume the proper form was set
+      //allowing the UserPassword.authenticate bindFromRequest succeed
+      //case p: UserPassword[USER] => handleGenericAuth(p)(fail => onUnauthorized(request))
+      case p: OAuth1Provider[USER] => p.maybeService.map { oauth =>
+        oauth1RetrieveAccessToken(oauth,callback.absoluteURL()).flashing("associate-key"->associateKey)
+      }
+
+      case p: OAuth2Provider[USER] => p.maybeSettings.map { settings =>
+        oauth2RetrieveAccessCode(settings,callback.absoluteURL()).flashing("associate-key"->associateKey)
+      }
+
+      case _ => Some(onUnauthorized)
+    } getOrElse {
+      onUnauthorized
     }
   }
 
   def associateProviderCallback(provider: String)(f: RequestHeader => AssociateProviderResult[USER] => Future[SimpleResult])= Action.async { implicit request =>
     import play.api.Play.current
-    val uid = Cache.get("temp")
-    val linkedin = oauth1providers("linkedin")
-    linkedin.authenticate(request).flatMap {
-      case Success(user) => f(request)(AssociateAlreadyInUse[USER](user))
-      case Failure(RequiresNewOauthUser(oauth)) => {
-        val zzz = uid.get.asInstanceOf[USER#ID]
-        f(request)(AssociateSuccessful[USER](zzz,oauth))
+    val uid = request.flash.get("associate-key").flatMap(Cache.get)
+    providers.get(provider).map { p =>
+      p.authenticate(request).flatMap {
+        case Success(user) => f(request)(AssociateAlreadyInUse[USER](user))
+        case Failure(RequiresNewOauthUser(oauth)) => {
+          uid.map { foo =>
+            val zzz = foo.asInstanceOf[USER#ID]
+            f(request)(AssociateSuccessful[USER](zzz,oauth))
+          } getOrElse {
+            f(request)(AssociateFailed("Error getting stored UID from Cache"))
+          }
+        }
+        case Failure(fail) => { println("WHY YOU :(?",fail) ; f(request)(AssociateFailed(s"Authentication failure: ${fail}")) }
       }
-      case Failure(fail) => { f(request)(AssociateFailed("")) }
+    } getOrElse {
+      Future(BadRequest)
     }
   }
 
   def authenticate(provider: String) = handleAuth(provider)
   def authenticateByPost(provider: String) = handleAuth(provider)
 
-  def oauth1RetrieveRequestToken[A](service: OAuth, callbackUrl: String)(implicit request: Request[A]): SimpleResult = {
+  def oauth1RetrieveAccessToken[A](service: OAuth, callbackUrl: String)(implicit request: Request[A]): SimpleResult = {
     import play.api.Play.current
     if ( Logger.isDebugEnabled ) {
       Logger.debug("[reactivesecurity] callback url = " + callbackUrl)
@@ -100,8 +126,7 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
     service.retrieveRequestToken(callbackUrl) match {
       case Right(requestToken) =>  {
         val cacheKey = UUID.randomUUID().toString
-        val redirect = Redirect(service.redirectUrl(requestToken.token)).withSession(request.session +
-          (OAuth1Provider.CacheKey -> cacheKey))
+        val redirect = Redirect(service.redirectUrl(requestToken.token)).withSession(session + (OAuth1Provider.CacheKey -> cacheKey))
         Cache.set(cacheKey, requestToken, 600) // set it for 10 minutes, plenty of time to log in
         redirect
       }
@@ -130,14 +155,14 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
       Logger.debug("[reactivesecurity] authorizationUrl = %s".format(settings.authorizationUrl))
       Logger.debug("[reactivesecurity] redirecting to: [%s]".format(url))
     }
-    Redirect( url ).withSession(request.session + ("sid", sessionId))
+    Redirect(url).withSession(request.session + ("sid", sessionId))
   }
 
   def handleOAuth1[A](p: OAuth1Provider[USER])(implicit request: Request[A]): Future[SimpleResult] = {
     val callback = RoutesHelper.authenticate(p.providerId).absoluteURL()
     handleGenericAuth(p) {
       case OauthNoVerifier => p.maybeService.map { service =>
-        oauth1RetrieveRequestToken(service,callback)
+        oauth1RetrieveAccessToken(service,callback)
       }.getOrElse {
         if ( Logger.isDebugEnabled ) {
           Logger.debug(s"[reactivesecurity] Error using Oauth Service: ${p.providerId}")
@@ -150,43 +175,33 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
 
   def handleOAuth2[A](p: OAuth2Provider[USER])(implicit request: Request[A]): Future[SimpleResult] = {
     val callback = RoutesHelper.authenticate(p.providerId).absoluteURL()
-    handleGenericAuth(p) { fail => fail match {
+    handleGenericAuth(p) {
       case OAuth2NoAccessCode => p.maybeSettings.map {
         settings => oauth2RetrieveAccessCode(settings,callback)
       }.getOrElse(onUnauthorized(request))
       case _ => onUnauthorized(request)
-    }}
+    }
   }
 
   def handleGenericAuth[A](p: Provider[USER])(onFail: AuthenticationFailure => SimpleResult)(implicit request: Request[A]): Future[SimpleResult] = {
     p.authenticate(request).flatMap {
       case Success(user) => completeAuthentication(user)(onLoginSucceeded(p.providerId))
-      case Failure(RequiresNewOauthUser(oauth)) => { println("OMG") ; Future(onNewOauthUser(oauth)) }
-      case Failure(fail) => Future(onFail(fail))
+      case Failure(RequiresNewOauthUser(oauth)) => Future(onNewOauthUser(oauth))
+      case Failure(f) => Future(onFail(f))
     }
   }
 
-  lazy val userpass = new UserPasswordFormProvider(userService,passService)
 
-  lazy val oauth1providers = Map[String, OAuth1Provider[USER]](
-    "linkedin" -> new LinkedInProvider[USER](userService)
-  )
-
-  lazy val oauth2providers = Map[String,OAuth2Provider[USER]](
-    "google" -> new GoogleProvider[USER](userService)
-  )
 
   private def handleAuth(provider: String) = Action.async { implicit request =>
     Logger.debug("[reactivesecurity] Authorizing with provider: "+provider)
-    if(provider == "userpass") {
-      handleGenericAuth(userpass){ fail => onUnauthorized(request) }
-    }
-    else {
-      oauth1providers.get(provider).map { oauth1 =>
-        handleOAuth1(oauth1)
-      }.getOrElse { oauth2providers.get(provider).map { oauth2 =>
-        handleOAuth2(oauth2)
-      }.getOrElse(future { onUnauthorized(request) }) }
+    providers.get(provider).map {
+      case p: UserPassword[USER] => handleGenericAuth(p)(fail => onUnauthorized(request))
+      case p: OAuth1Provider[USER] => handleOAuth1(p)
+      case p: OAuth2Provider[USER] => handleOAuth2(p)
+      case _ => failure
+    } getOrElse {
+      failure
     }
   }
 

@@ -29,23 +29,13 @@ import play.api.libs.oauth.ServiceInfo
 import play.api.libs.oauth.RequestToken
 import play.api.libs.oauth.OAuthCalculator
 
-class LinkedInProvider[USER <: UsingID](service: UserService[USER]) extends OAuth1Provider[USER](service) {
+case class LinkedInProvider[USER <: UsingID](service: UserService[USER]) extends OAuth1Provider[USER](service) {
 
   override def providerId = LinkedInProvider.LinkedIn
 
   def fill(accessToken: RequestToken, serviceInfo: ServiceInfo): Future[Option[OauthUserData]] = {
     WS.url(LinkedInProvider.Api).sign(OAuthCalculator(serviceInfo.key,accessToken)).get().map { response =>
       val me = response.json
-      println("!!!!!!!!!!!!!!!!!!!!!!!!!!! LinkedInProvider")
-      println(me)
-
-      println("ServiceInfo: ",serviceInfo)
-      println("ServiceInfo.key: ",serviceInfo.key)
-      println("AccessToken: ", accessToken)
-      val wat = "https://api.linkedin.com/v1/people/~:(associations,educations,skills,three-past-positions,three-current-positions)?format=json&scope=r_fullprofile"
-      val foo = WS.url(wat).sign(OAuthCalculator(serviceInfo.key, accessToken)).get()
-      println(scala.concurrent.Await.result(foo,scala.concurrent.duration.Duration("10 seconds")).body)
-
       (me \ ErrorCode).asOpt[Int] match {
         case Some(error) => {
           val message = (me \ Message).asOpt[String]

@@ -16,7 +16,7 @@ import play.api.Logger
 
 case class IdPass(id: String, password: String)
 
-class UserPasswordFormProvider[USER <: UsingID](users: UserService[USER], passService: PasswordService[USER]) extends Provider[USER] {
+case class UserPassword[USER <: UsingID](users: UserService[USER], passService: PasswordService[USER]) extends Provider[USER] {
 
   override val providerId = "userpass"
 

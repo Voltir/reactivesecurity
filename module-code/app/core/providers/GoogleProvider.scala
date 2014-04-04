@@ -30,7 +30,7 @@ import concurrent.ExecutionContext.Implicits.global
 /**
  * A Google OAuth2 Provider
  */
-class GoogleProvider[USER <: UsingID](service: UserService[USER]) extends OAuth2Provider[USER](service) {
+case class GoogleProvider[USER <: UsingID](service: UserService[USER]) extends OAuth2Provider[USER](service) {
   val UserInfoApi = "https://www.googleapis.com/oauth2/v1/userinfo?access_token="
   val Error = "error"
   val Message = "message"
