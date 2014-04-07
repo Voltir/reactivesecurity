@@ -51,7 +51,7 @@ case class GoogleProvider[USER <: UsingID](service: UserService[USER]) extends O
         case Some(error) => {
           val message = (error \ Message).asOpt[String]
           val errorType = ( error \ Type).asOpt[String]
-          Logger.error("[securesocial] error retrieving profile information from Google. Error type = %s, message = %s"
+          Logger.error("[reactivesecurity] error retrieving profile information from Google. Error type = %s, message = %s"
             .format(errorType,message))
           None
         }

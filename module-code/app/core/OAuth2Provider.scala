@@ -60,6 +60,7 @@ abstract class OAuth2Provider[USER <: UsingID](userService: UserService[USER]) e
   override def providerId: String
 
   val maybeSettings = getSettings()
+  val secured = play.api.Play.current.configuration.getString("https.port").isDefined
 
   private def getSettings(): Option[OAuth2Settings] = {
     val result = for {
@@ -100,13 +101,13 @@ abstract class OAuth2Provider[USER <: UsingID](userService: UserService[USER]) e
     credentials.queryString.get(OAuth2Constants.Code).flatMap(_.headOption).map { code =>
       val accessToken: Option[Future[OAuth2Info]] = for {
         settings <- maybeSettings
-        sessionId <- credentials.session.get("sid");
+        sessionId <- credentials.session.get("sid")
         // todo: review this -> clustered environments
-        originalState <- Cache.getAs[String](sessionId);
+        originalState <- Cache.getAs[String](sessionId)
         currentState <- credentials.queryString.get(OAuth2Constants.State).flatMap(_.headOption)
         if originalState == currentState
       } yield {
-        val callback = RoutesHelper.authenticate(providerId).absoluteURL()(credentials)
+        val callback = RoutesHelper.authenticate(providerId).absoluteURL(secured)(credentials)
         getAccessToken(code,settings,callback)(credentials)
       }
 
@@ -118,58 +119,7 @@ abstract class OAuth2Provider[USER <: UsingID](userService: UserService[USER]) e
           else future { Failure(OauthFailure(("Could not retrieve oauth data"))) }
         }
       }}.getOrElse(future { Failure(OauthFailure("Invalid OAuth2 Access Token"))} )
-
-      //future { Failure(OauthFailure("WIP")) }
     }.getOrElse(future { Failure(OAuth2NoAccessCode) })
-    /*
-    credentials.queryString.get(OAuth2Constants.Code).flatMap(_.headOption) match {
-      case Some(code) =>
-        // we're being redirected back from the authorization server with the access code.
-        val user = for (
-          // check if the state we sent is equal to the one we're receiving now before continuing the flow.
-          sessionId <- credentials.session.get(IdentityProvider.SessionId) ;
-          // todo: review this -> clustered environments
-          originalState <- Cache.getAs[String](sessionId) ;
-          currentState <- credentials.queryString.get(OAuth2Constants.State).flatMap(_.headOption) if originalState == currentState
-        ) yield {
-          val accessToken = getAccessToken(code)
-          val oauth2Info = Some(
-            OAuth2Info(accessToken.accessToken, accessToken.tokenType, accessToken.expiresIn, accessToken.refreshToken)
-          )
-          //SocialUser(IdentityId("", id), "", "", "", None, None, authMethod, oAuth2Info = oauth2Info)
-        }
-        if ( Logger.isDebugEnabled ) {
-          Logger.debug("[securesocial] user = " + user)
-        }
-        user match  {
-          case Some(u) => Right(u)
-          case _ => throw new AuthenticationException()
-        }
-      case None =>
-        // There's no code in the request, this is the first step in the oauth flow
-        val state = UUID.randomUUID().toString
-        val sessionId = request.session.get(IdentityProvider.SessionId).getOrElse(UUID.randomUUID().toString)
-        Cache.set(sessionId, state)
-        var params = List(
-          (OAuth2Constants.ClientId, settings.clientId),
-          (OAuth2Constants.RedirectUri, RoutesHelper.authenticate(id).absoluteURL(IdentityProvider.sslEnabled)),
-          (OAuth2Constants.ResponseType, OAuth2Constants.Code),
-          (OAuth2Constants.State, state))
-        settings.scope.foreach( s => { params = (OAuth2Constants.Scope, s) :: params })
-        val url = settings.authorizationUrl +
-          params.map( p => p._1 + "=" + URLEncoder.encode(p._2, "UTF-8")).mkString("?", "&", "")
-        if ( Logger.isDebugEnabled ) {
-          Logger.debug("[securesocial] authorizationUrl = %s".format(settings.authorizationUrl))
-          Logger.debug("[securesocial] redirecting to: [%s]".format(url))
-        }
-        Left(Results.Redirect( url ).withSession(request.session + (IdentityProvider.SessionId, sessionId)))
-    }
-    */
-    /*def fail(errTxt: String): Validation[AuthenticationFailure,USER] = Failure(OauthFailure(errTxt))
-    credentials.queryString.get(OAuth2Constants.Code).map {
-      future { fail("wip") }
-    }.getOrElse(future { fail("wip") } )
-    */
   }
 }
 

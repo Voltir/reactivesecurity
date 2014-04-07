@@ -34,6 +34,8 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
   val passService: PasswordService[USER]
   val authenticator: Authenticator[USER]
 
+  val secured = play.api.Play.current.configuration.getString("https.port").isDefined
+
   def onUnauthorized(implicit request: RequestHeader): SimpleResult
 
   def onLoginSucceeded(provider: String)(implicit request: RequestHeader): SimpleResult
@@ -66,6 +68,7 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
   lazy val providers: Map[String,Provider[USER]] = Map(
     "userpass" -> UserPassword(userService,passService),
     "linkedin" -> LinkedInProvider[USER](userService),
+    "twitter" -> TwitterProvider[USER](userService),
     "google" -> GoogleProvider[USER](userService)
   )
 
@@ -81,11 +84,11 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
       //allowing the UserPassword.authenticate bindFromRequest succeed
       //case p: UserPassword[USER] => handleGenericAuth(p)(fail => onUnauthorized(request))
       case p: OAuth1Provider[USER] => p.maybeService.map { oauth =>
-        oauth1RetrieveAccessToken(oauth,callback.absoluteURL()).flashing("associate-key"->associateKey)
+        oauth1RetrieveAccessToken(oauth,callback.absoluteURL(secured)).flashing("associate-key"->associateKey)
       }
 
       case p: OAuth2Provider[USER] => p.maybeSettings.map { settings =>
-        oauth2RetrieveAccessCode(settings,callback.absoluteURL()).flashing("associate-key"->associateKey)
+        oauth2RetrieveAccessCode(settings,callback.absoluteURL(secured)).flashing("associate-key"->associateKey)
       }
 
       case _ => Some(onUnauthorized)
@@ -123,6 +126,7 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
     if ( Logger.isDebugEnabled ) {
       Logger.debug("[reactivesecurity] callback url = " + callbackUrl)
     }
+    println(service)
     service.retrieveRequestToken(callbackUrl) match {
       case Right(requestToken) =>  {
         val cacheKey = UUID.randomUUID().toString
@@ -132,6 +136,7 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
       }
       case Left(e) => {
         Logger.error("[reactivesecurity] error retrieving request token", e)
+        Logger.error(s"[reactivesecurity] Message: ${e.getMessage}")
         Ok("Todo -- Handle error case when retrieving request token")
       }
     }
@@ -159,7 +164,7 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
   }
 
   def handleOAuth1[A](p: OAuth1Provider[USER])(implicit request: Request[A]): Future[SimpleResult] = {
-    val callback = RoutesHelper.authenticate(p.providerId).absoluteURL()
+    val callback = RoutesHelper.authenticate(p.providerId).absoluteURL(secured)
     handleGenericAuth(p) {
       case OauthNoVerifier => p.maybeService.map { service =>
         oauth1RetrieveAccessToken(service,callback)
@@ -174,7 +179,7 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
   }
 
   def handleOAuth2[A](p: OAuth2Provider[USER])(implicit request: Request[A]): Future[SimpleResult] = {
-    val callback = RoutesHelper.authenticate(p.providerId).absoluteURL()
+    val callback = RoutesHelper.authenticate(p.providerId).absoluteURL(secured)
     handleGenericAuth(p) {
       case OAuth2NoAccessCode => p.maybeSettings.map {
         settings => oauth2RetrieveAccessCode(settings,callback)
@@ -209,7 +214,7 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
     if ( Logger.isDebugEnabled ) {
       Logger.debug("[reactivesecurity] user logged in : [" + user + "]")
     }
-    val secured = play.api.Play.current.configuration.getString("https.port").isDefined
+
     val expire = org.joda.time.Duration.standardHours(12)
     authenticator.create(user.id, expire).map {
       case Failure(_) => onUnauthorized(request)
