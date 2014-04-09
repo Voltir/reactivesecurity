@@ -111,7 +111,7 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
             f(request)(AssociateFailed("Error getting stored UID from Cache"))
           }
         }
-        case Failure(fail) => { println("WHY YOU :(?",fail) ; f(request)(AssociateFailed(s"Authentication failure: ${fail}")) }
+        case Failure(fail) => { f(request)(AssociateFailed(s"Authentication failure: ${fail}")) }
       }
     } getOrElse {
       Future(BadRequest)
@@ -126,7 +126,6 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
     if ( Logger.isDebugEnabled ) {
       Logger.debug("[reactivesecurity] callback url = " + callbackUrl)
     }
-    println(service)
     service.retrieveRequestToken(callbackUrl) match {
       case Right(requestToken) =>  {
         val cacheKey = UUID.randomUUID().toString
@@ -136,8 +135,7 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
       }
       case Left(e) => {
         Logger.error("[reactivesecurity] error retrieving request token", e)
-        Logger.error(s"[reactivesecurity] Message: ${e.getMessage}")
-        Ok("Todo -- Handle error case when retrieving request token")
+        BadRequest
       }
     }
   }
