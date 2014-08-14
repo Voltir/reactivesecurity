@@ -40,6 +40,8 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
 
   def onLoginSucceeded(provider: String)(implicit request: RequestHeader): SimpleResult
 
+  def onLoginProcessEnded(request: RequestHeader, response: SimpleResult): SimpleResult = response //by default do nothing
+
   def onLogoutSucceeded(implicit request: RequestHeader): SimpleResult
 
   def onStillLoggedIn(implicit request: RequestHeader): SimpleResult
@@ -216,7 +218,10 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
     val expire = org.joda.time.Duration.standardHours(12)
     authenticator.create(user.id, expire).map {
       case Failure(_) => onUnauthorized(request)
-      case Success(token) => onSuccess.withCookies(authenticator.cookies(token,secured))
+      case Success(token) => {
+        val responseWithAuthCookie = onSuccess.withCookies(authenticator.cookies(token,secured))
+        onLoginProcessEnded(request, responseWithAuthCookie)
+      }
     }
   }
 }
