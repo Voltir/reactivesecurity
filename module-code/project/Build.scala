@@ -5,7 +5,7 @@ import play.Project._
 object ApplicationBuild extends Build {
 
   val appName         = "reactivesecurity"
-  val appVersion      = "1.2.7-SNAPSHOT"
+  val appVersion      = "1.2.8-SNAPSHOT-jh"
 
   val appDependencies = Seq(
     cache,
