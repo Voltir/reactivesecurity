@@ -6,7 +6,7 @@ import PlayKeys._
 object ApplicationBuild extends Build {
 
   val appName         = "reactivesecurity"
-  val appVersion      = "1.2.7-SNAPSHOT"
+  val appVersion      = "1.3.0-SNAPSHOT"
 
   val appDependencies = Seq(
     ws,
@@ -24,8 +24,6 @@ object ApplicationBuild extends Build {
       "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
     ),
     libraryDependencies ++= appDependencies,
-    publishTo := Some(Resolver.file(
-      "Github Pages", new File("/home/jobhive/publish/reactivesecurity"))
-    ) 
+    publishTo := Some(Resolver.file("file", new File(baseDirectory.value+"/../../oss-repo/maven")))
   )
 }
