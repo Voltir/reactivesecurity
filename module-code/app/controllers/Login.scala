@@ -40,6 +40,8 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
 
   def onLoginSucceeded(provider: String)(implicit request: RequestHeader): SimpleResult
 
+  def onLoginProcessEnded(request: RequestHeader, response: SimpleResult, token: Cookie): SimpleResult = response //by default do nothing
+
   def onLogoutSucceeded(implicit request: RequestHeader): SimpleResult
 
   def onStillLoggedIn(implicit request: RequestHeader): SimpleResult
@@ -121,7 +123,7 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
   def authenticate(provider: String) = handleAuth(provider)
   def authenticateByPost(provider: String) = handleAuth(provider)
 
-  def oauth1RetrieveAccessToken[A](service: OAuth, callbackUrl: String)(implicit request: Request[A]): SimpleResult = {
+  def oauth1RetrieveAccessToken[A](service: OAuth, callbackUrl: String)(implicit request: Request[A]): Result = {
     import play.api.Play.current
     if ( Logger.isDebugEnabled ) {
       Logger.debug("[reactivesecurity] callback url = " + callbackUrl)
@@ -129,7 +131,7 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
     service.retrieveRequestToken(callbackUrl) match {
       case Right(requestToken) =>  {
         val cacheKey = UUID.randomUUID().toString
-        val redirect = Redirect(service.redirectUrl(requestToken.token)).withSession(session + (OAuth1Provider.CacheKey -> cacheKey))
+        val redirect = Redirect(service.redirectUrl(requestToken.token)).withSession(request.session + (OAuth1Provider.CacheKey -> cacheKey))
         Cache.set(cacheKey, requestToken, 600) // set it for 10 minutes, plenty of time to log in
         redirect
       }
@@ -216,7 +218,11 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
     val expire = org.joda.time.Duration.standardHours(12)
     authenticator.create(user.id, expire).map {
       case Failure(_) => onUnauthorized(request)
-      case Success(token) => onSuccess.withCookies(authenticator.cookies(token,secured))
+      case Success(token) => {
+	val tokenCookie = authenticator.cookies(token,secured)
+        val responseWithAuthCookie = onSuccess.withCookies(tokenCookie)
+        onLoginProcessEnded(request, responseWithAuthCookie, tokenCookie)
+      }
     }
   }
 }

@@ -18,14 +18,14 @@ package securesocial.core.providers
 
 import play.api.libs.ws.WS
 import play.api.{Application, Logger}
+import play.api.Play.current
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.JsObject
 import reactivesecurity.core.Failures._
 import reactivesecurity.core.User.{UserService, UsingID}
 import reactivesecurity.core.util.{Oauth2, OauthUserData}
 import reactivesecurity.core.OAuth2Provider
 import scala.concurrent.Future
-import concurrent.ExecutionContext.Implicits.global
-
 
 /**
  * A Google OAuth2 Provider
