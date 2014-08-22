@@ -34,14 +34,13 @@ trait AuthenticationAction[USER <: UsingID] extends PlayAuthentication[RequestHe
 
   def AuthenticatedWS[A](f: RequestHeader => USER => Future[(Iteratee[A, _], Enumerator[A])])(
     implicit frameFormatter: FrameFormatter[A]): WebSocket[A, A] = WebSocket.tryAccept[A] {
-    request => inputValidator.validateInput(request).flatMap { result =>
+    request => inputValidator(request).flatMap { result =>
       result.fold(
         fail => Future(Left(play.api.mvc.Results.Unauthorized)),
         user => (f(request)(user)).map{s => Right(s)}
       )
     }
   }
-  */
 
   object MaybeAuthenticated extends ActionBuilder[MaybeAuthenticatedRequest] {
     def invokeBlock[A](request: Request[A], block: MaybeAuthenticatedRequest[A] => Future[Result]) = {
