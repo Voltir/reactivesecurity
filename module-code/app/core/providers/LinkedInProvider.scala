@@ -33,6 +33,8 @@ case class LinkedInProvider[USER <: UsingID](service: UserService[USER]) extends
 
   override def providerId = LinkedInProvider.LinkedIn
 
+  import play.api.Play.current
+
   def fill(accessToken: RequestToken, serviceInfo: ServiceInfo): Future[Option[OauthUserData]] = {
     WS.url(LinkedInProvider.Api).sign(OAuthCalculator(serviceInfo.key,accessToken)).get().map { response =>
       val me = response.json

@@ -13,11 +13,11 @@ class InMemoryPasswordService[USER <: UsingID] extends PasswordService[USER] {
 
   override def find(id: USER#ID)(implicit ec: ExecutionContext): Future[Option[PasswordInfo]] = {
     val password = passwords.get(id)
-    future { password }
+    Future(password)
   }
 
   override def save(id: USER#ID, pass: PasswordInfo)(implicit ec: ExecutionContext): Future[Boolean] = {
     passwords += (id -> pass)
-    future { true }
+    Future(true)
   }
 }

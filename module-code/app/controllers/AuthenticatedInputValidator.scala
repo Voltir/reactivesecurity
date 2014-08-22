@@ -1,6 +1,6 @@
 package reactivesecurity.controllers
 
-import reactivesecurity.core.Authenticator
+import reactivesecurity.core.{AuthenticationToken, AuthenticatorService, Authenticator}
 
 //merge??
 import reactivesecurity.core.User.{UserService, UsingID}
@@ -10,15 +10,17 @@ import concurrent.{ExecutionContext, Future}
 import scalaz.{Success, Failure, Validation}
 import play.api.mvc.RequestHeader
 
-abstract class AuthenticatedInputValidator[USER <: UsingID] extends InputValidator[RequestHeader,USER,AuthenticationFailure] {
-  val users: UserService[USER]
-  val authenticator: Authenticator[USER]
+abstract class AuthenticatedInputValidator[User <: UsingID] extends InputValidator[RequestHeader,User,AuthenticationFailure] {
+  //val users: UserService[USER]
+  //val authenticator: Authenticator[USER]
+  val authService: AuthenticatorService[User,AuthenticationFailure]
+  def extractAuthenticationToken(req: RequestHeader): Option[AuthenticationToken]
 
-  override def validateInput(in: RequestHeader)(implicit ec: ExecutionContext): Future[Validation[UserServiceFailure,USER]] = {
-    val fail: Validation[UserServiceFailure,USER] = Failure(ValidationFailure)
-    authenticator.touch(in).flatMap {
-      case Some(token) => users.find(token.uid).map(_.fold(fail)(Success(_)))
-      case _ => Future(fail)
+  override def apply(in: RequestHeader)(implicit ec: ExecutionContext): Future[Validation[AuthenticationFailure,User]] = {
+    extractAuthenticationToken(in).map { token =>
+      authService.get(token)
+    }.getOrElse {
+      Future(Failure(AuthenticationTokenNotFound))
     }
   }
 }

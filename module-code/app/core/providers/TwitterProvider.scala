@@ -35,6 +35,8 @@ import play.api.libs.oauth.OAuthCalculator
 case class TwitterProvider[USER <: UsingID](service: UserService[USER]) extends OAuth1Provider[USER](service) {
   override def providerId = TwitterProvider.Twitter
 
+  import play.api.Play.current
+
   def fill(accessToken: RequestToken, serviceInfo: ServiceInfo): Future[Option[OauthUserData]] = {
     WS.url(TwitterProvider.VerifyCredentials).sign(OAuthCalculator(serviceInfo.key,accessToken)).get().map { response =>
       val me = response.json

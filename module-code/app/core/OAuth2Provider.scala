@@ -28,7 +28,7 @@ import reactivesecurity.core.Authentication.AuthenticationValidator
 import reactivesecurity.core.Failures._
 import reactivesecurity.core.User.{UserService, UsingID}
 import reactivesecurity.core.util.{OauthAuthenticationHelper, OauthUserData}
-import scala.concurrent.{Future, future}
+import scala.concurrent.Future
 import concurrent.ExecutionContext.Implicits.global
 import scalaz.{Failure, Validation}
 import play.api.libs.ws.WS
@@ -116,10 +116,10 @@ abstract class OAuth2Provider[USER <: UsingID](userService: UserService[USER]) e
         val oauth = fill(token.accessToken)
         oauth.flatMap { o =>
           if(o.isDefined) OauthAuthenticationHelper.finishAuthenticate(providerId,userService,o.get)
-          else future { Failure(OauthFailure(("Could not retrieve oauth data"))) }
+          else Future(Failure(OauthFailure("Could not retrieve oauth data")))
         }
-      }}.getOrElse(future { Failure(OauthFailure("Invalid OAuth2 Access Token"))} )
-    }.getOrElse(future { Failure(OAuth2NoAccessCode) })
+      }}.getOrElse(Future(Failure(OauthFailure("Invalid OAuth2 Access Token"))))
+    }.getOrElse(Future(Failure(OAuth2NoAccessCode)))
   }
 }
 

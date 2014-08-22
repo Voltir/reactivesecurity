@@ -1,7 +1,6 @@
 package reactivesecurity.controllers
 
 import reactivesecurity.core._
-import reactivesecurity.core.Authentication.AuthenticationValidator
 import reactivesecurity.core.providers._
 import reactivesecurity.core.User.{UserService, UsingID}
 import reactivesecurity.core.Failures._
@@ -10,7 +9,6 @@ import reactivesecurity.core.Password.PasswordService
 import play.api.mvc._
 import play.api.Logger
 import play.api.cache.Cache
-import play.api.mvc.Call
 import play.api.libs.oauth.OAuth
 import play.api.data._
 import play.api.data.Forms._
@@ -18,7 +16,7 @@ import play.api.data.Forms._
 import java.util.UUID
 import reactivesecurity.core.util.OauthUserData
 import scalaz.{Failure,Success}
-import scala.concurrent.{Future, ExecutionContext, future}
+import scala.concurrent.{Future, ExecutionContext}
 import ExecutionContext.Implicits.global
 import java.net.URLEncoder
 import securesocial.core.providers.GoogleProvider
@@ -36,17 +34,17 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
 
   val secured = play.api.Play.current.configuration.getString("https.port").isDefined
 
-  def onUnauthorized(implicit request: RequestHeader): SimpleResult
+  def onUnauthorized(implicit request: RequestHeader): Result
 
-  def onLoginSucceeded(provider: String)(implicit request: RequestHeader): SimpleResult
+  def onLoginSucceeded(provider: String)(implicit request: RequestHeader): Result
 
-  def onLogoutSucceeded(implicit request: RequestHeader): SimpleResult
+  def onLogoutSucceeded(implicit request: RequestHeader): Result
 
-  def onStillLoggedIn(implicit request: RequestHeader): SimpleResult
+  def onStillLoggedIn(implicit request: RequestHeader): Result
 
-  def getLoginPage(implicit request: RequestHeader): SimpleResult
+  def getLoginPage(implicit request: RequestHeader): Result
 
-  def onNewOauthUser(data: reactivesecurity.core.util.OauthUserData)(implicit request: RequestHeader): SimpleResult
+  def onNewOauthUser(data: reactivesecurity.core.util.OauthUserData)(implicit request: RequestHeader): Result
 
   def login = MaybeAuthenticated { implicit request =>
     request.maybeUser.map { user =>
@@ -72,7 +70,7 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
     "google" -> GoogleProvider[USER](userService)
   )
 
-  private def failure(implicit request: RequestHeader) = future { onUnauthorized(request) }
+  private def failure(implicit request: RequestHeader) = Future(onUnauthorized(request))
 
   def associateProvider(provider: String) = Authenticated { implicit request =>
     import play.api.Play.current
@@ -97,16 +95,15 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
     }
   }
 
-  def associateProviderCallback(provider: String)(f: RequestHeader => AssociateProviderResult[USER] => Future[SimpleResult])= Action.async { implicit request =>
+  def associateProviderCallback(provider: String)(f: RequestHeader => AssociateProviderResult[USER] => Future[Result])= Action.async { implicit request =>
     import play.api.Play.current
-    val uid = request.flash.get("associate-key").flatMap(Cache.get)
+    val savedUid = request.flash.get("associate-key").flatMap(Cache.get)
     providers.get(provider).map { p =>
       p.authenticate(request).flatMap {
         case Success(user) => f(request)(AssociateAlreadyInUse[USER](user))
         case Failure(RequiresNewOauthUser(oauth)) => {
-          uid.map { foo =>
-            val zzz = foo.asInstanceOf[USER#ID]
-            f(request)(AssociateSuccessful[USER](zzz,oauth))
+          savedUid.map { uid =>
+            f(request)(AssociateSuccessful[USER](uid.asInstanceOf[USER#ID],oauth))
           } getOrElse {
             f(request)(AssociateFailed("Error getting stored UID from Cache"))
           }
@@ -121,7 +118,7 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
   def authenticate(provider: String) = handleAuth(provider)
   def authenticateByPost(provider: String) = handleAuth(provider)
 
-  def oauth1RetrieveAccessToken[A](service: OAuth, callbackUrl: String)(implicit request: Request[A]): SimpleResult = {
+  def oauth1RetrieveAccessToken[A](service: OAuth, callbackUrl: String)(implicit request: Request[A]): Result = {
     import play.api.Play.current
     if ( Logger.isDebugEnabled ) {
       Logger.debug("[reactivesecurity] callback url = " + callbackUrl)
@@ -129,7 +126,7 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
     service.retrieveRequestToken(callbackUrl) match {
       case Right(requestToken) =>  {
         val cacheKey = UUID.randomUUID().toString
-        val redirect = Redirect(service.redirectUrl(requestToken.token)).withSession(session + (OAuth1Provider.CacheKey -> cacheKey))
+        val redirect = Redirect(service.redirectUrl(requestToken.token)).withSession(request.session + (OAuth1Provider.CacheKey -> cacheKey))
         Cache.set(cacheKey, requestToken, 600) // set it for 10 minutes, plenty of time to log in
         redirect
       }
@@ -140,7 +137,7 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
     }
   }
 
-  def oauth2RetrieveAccessCode[A](settings: OAuth2Settings, callbackUrl: String)(implicit request: Request[A]): SimpleResult = {
+  def oauth2RetrieveAccessCode[A](settings: OAuth2Settings, callbackUrl: String)(implicit request: Request[A]): Result = {
     import play.api.Play.current
     // There's no code in the request, this is the first step in the oauth flow
     val state = UUID.randomUUID().toString
@@ -161,7 +158,7 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
     Redirect(url).withSession(request.session + ("sid", sessionId))
   }
 
-  def handleOAuth1[A](p: OAuth1Provider[USER])(implicit request: Request[A]): Future[SimpleResult] = {
+  def handleOAuth1[A](p: OAuth1Provider[USER])(implicit request: Request[A]): Future[Result] = {
     val callback = RoutesHelper.authenticate(p.providerId).absoluteURL(secured)
     handleGenericAuth(p) {
       case OauthNoVerifier => p.maybeService.map { service =>
@@ -176,7 +173,7 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
     }
   }
 
-  def handleOAuth2[A](p: OAuth2Provider[USER])(implicit request: Request[A]): Future[SimpleResult] = {
+  def handleOAuth2[A](p: OAuth2Provider[USER])(implicit request: Request[A]): Future[Result] = {
     val callback = RoutesHelper.authenticate(p.providerId).absoluteURL(secured)
     handleGenericAuth(p) {
       case OAuth2NoAccessCode => p.maybeSettings.map {
@@ -186,15 +183,13 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
     }
   }
 
-  def handleGenericAuth[A](p: Provider[USER])(onFail: AuthenticationFailure => SimpleResult)(implicit request: Request[A]): Future[SimpleResult] = {
+  def handleGenericAuth[A](p: Provider[USER])(onFail: AuthenticationFailure => Result)(implicit request: Request[A]): Future[Result] = {
     p.authenticate(request).flatMap {
       case Success(user) => completeAuthentication(user)(onLoginSucceeded(p.providerId))
       case Failure(RequiresNewOauthUser(oauth)) => Future(onNewOauthUser(oauth))
       case Failure(f) => Future(onFail(f))
     }
   }
-
-
 
   private def handleAuth(provider: String) = Action.async { implicit request =>
     Logger.debug("[reactivesecurity] Authorizing with provider: "+provider)
@@ -208,7 +203,7 @@ abstract class Login[USER <: UsingID] extends Controller with AuthenticationActi
     }
   }
 
-  def completeAuthentication(user: USER)(onSuccess: SimpleResult)(implicit request: RequestHeader): Future[SimpleResult] = {
+  def completeAuthentication(user: USER)(onSuccess: Result)(implicit request: RequestHeader): Future[Result] = {
     if ( Logger.isDebugEnabled ) {
       Logger.debug("[reactivesecurity] user logged in : [" + user + "]")
     }

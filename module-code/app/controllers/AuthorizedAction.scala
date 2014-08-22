@@ -15,7 +15,7 @@ trait AuthorizedAction[USER <: UsingID] extends AuthenticationAction[USER] {
   class AuthorizedRequest[A](user: USER, request: Request[A]) extends AuthenticatedRequest[A](user,request)
 
   class AuthorizedActionBuilder(authorized: USER => Future[Boolean]) extends ActionBuilder[AuthorizedRequest] {
-    override def invokeBlock[A](request: Request[A], block: AuthorizedRequest[A] => Future[SimpleResult]) = {
+    override def invokeBlock[A](request: Request[A], block: AuthorizedRequest[A] => Future[Result]) = {
       val ec = implicitly[ExecutionContext]
       Authenticated.invokeBlock[A](request, { authenticated =>
         authorized(authenticated.user).flatMap { authorized =>

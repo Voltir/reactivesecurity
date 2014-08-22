@@ -16,9 +16,10 @@
  */
 package securesocial.core.providers
 
-import play.api.libs.ws.WS
+import play.api.libs.ws._
+import play.api.libs.functional.syntax._
 import play.api.{Application, Logger}
-import play.api.libs.json.JsObject
+import play.api.libs.json._
 import reactivesecurity.core.Failures._
 import reactivesecurity.core.User.{UserService, UsingID}
 import reactivesecurity.core.util.{Oauth2, OauthUserData}
@@ -43,6 +44,8 @@ case class GoogleProvider[USER <: UsingID](service: UserService[USER]) extends O
   val Email = "email"
 
   override def providerId = GoogleProvider.Google
+
+  import play.api.Play.current
 
   def fill(accessToken: String):  Future[Option[OauthUserData]] = {
     WS.url(UserInfoApi + accessToken).get().map { response =>
