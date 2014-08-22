@@ -21,10 +21,11 @@ import reactivesecurity.core._
 import reactivesecurity.core.User.{UserService, UsingID}
 import play.api.libs.ws.WS
 import play.api.Logger
+import play.api.Play.current
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import LinkedInProvider._
 import reactivesecurity.core.util.{Oauth1,OauthUserData}
 import scala.concurrent.Future
-import concurrent.ExecutionContext.Implicits.global
 import play.api.libs.oauth.ServiceInfo
 import play.api.libs.oauth.RequestToken
 import play.api.libs.oauth.OAuthCalculator

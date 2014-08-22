@@ -32,13 +32,12 @@ trait AuthenticationAction[USER <: UsingID] extends PlayAuthentication[RequestHe
     override def composeAction[A](action: Action[A]) = new Authenticated(action)
   }
 
-  /*
-  def AuthenticatedWS[A](f: RequestHeader => USER => Future[(Iteratee[A, _], Enumerator[A])])(implicit frameFormatter: FrameFormatter[A]): WebSocket[A] = WebSocket.async[A] {
+  def AuthenticatedWS[A](f: RequestHeader => USER => Future[(Iteratee[A, _], Enumerator[A])])(
+    implicit frameFormatter: FrameFormatter[A]): WebSocket[A, A] = WebSocket.tryAccept[A] {
     request => inputValidator.validateInput(request).flatMap { result =>
-      val foo: Iteratee[A,Nothing] = play.api.libs.iteratee.Error("Not Authorized",play.api.libs.iteratee.Input.Empty)
       result.fold(
-        fail => concurrent.future { (foo,Enumerator.eof) },
-        user => f(request)(user)
+        fail => Future(Left(play.api.mvc.Results.Unauthorized)),
+        user => (f(request)(user)).map{s => Right(s)}
       )
     }
   }
