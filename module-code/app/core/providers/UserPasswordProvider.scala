@@ -1,20 +1,15 @@
 package reactivesecurity.core.providers
 
-import reactivesecurity.controllers.LoginForm
-import reactivesecurity.core.Authentication.AuthenticationValidator
 import reactivesecurity.core.Password.PasswordService
 import reactivesecurity.core.Failures._
-import reactivesecurity.core.{Provider2, Provider}
-import scalaz.{Success, Failure, Validation}
+import reactivesecurity.core.Provider2
+import scalaz.{Failure, Validation}
 import reactivesecurity.core.User.{UserService, UsingID}
 import scala.concurrent.{ExecutionContext, Future}
-import ExecutionContext.Implicits.global
-import core.Credentials.{PasswordHashValidator2, PasswordHashValidator}
-import play.api.mvc.{AnyContent, Request}
-import play.api.Logger
+import core.Credentials.PasswordHashValidator2
 
+/* TODO DELETE
 case class IdPass(id: String, password: String)
-
 
 case class UserPassword[USER <: UsingID](users: UserService[USER], passService: PasswordService[USER]) extends Provider[USER] {
 
@@ -37,6 +32,7 @@ case class UserPassword[USER <: UsingID](users: UserService[USER], passService: 
     )
   }
 }
+*/
 
 case class EmailPass(email: String, password: String)
 
@@ -49,11 +45,10 @@ case class EmailPasswordProvider2[In, User <: UsingID](
 
   private val validator = new PasswordHashValidator2[User] { override val passwordService = passService }
 
-  override def authenticate(input: In): Future[Validation[AuthenticationFailure,User]] = {
+  override def authenticate(input: In)(implicit ec: ExecutionContext): Future[Validation[AuthenticationFailure,User]] = {
     val credentials = extract(input)
     users.findByProvider(providerId,credentials.email).flatMap { _.fold {
       val fail: Validation[AuthenticationFailure,User] = Failure(AuthenticationServiceFailure(IdentityNotFound(credentials.email)))
-      Logger.debug("[reactivesecurity] Userpass Authentication Failed -- Email Not Found: "+credentials.email)
       Future(fail)
     } {
       user => validator.validate(user,credentials)

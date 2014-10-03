@@ -1,5 +1,6 @@
 package reactivesecurity.controllers
-
+//TODO DELETE
+/*
 import reactivesecurity.core._
 import reactivesecurity.core.providers._
 import reactivesecurity.core.User.{UserService, UsingID}
@@ -230,3 +231,4 @@ object LoginForm {
     )
   )
 }
+*/

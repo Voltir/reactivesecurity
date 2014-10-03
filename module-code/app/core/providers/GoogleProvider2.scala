@@ -14,23 +14,23 @@
  * limitations under the License.
  *
  */
-//TODO DELETE
-/*
-package securesocial.core.providers
+package reactivesecurity.core.providers
 
 import play.api.libs.ws._
-import play.api.libs.functional.syntax._
-import play.api.{Application, Logger}
-import play.api.Play.current
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.JsObject
-import reactivesecurity.core.Failures._
 import reactivesecurity.core.User.{UserService, UsingID}
 import reactivesecurity.core.util.{Oauth2, OauthUserData}
-import reactivesecurity.core.OAuth2Provider
-import scala.concurrent.Future
+import reactivesecurity.core.{OAuth2Service, OAuth2Provider}
+import scala.concurrent.{ExecutionContext, Future}
 
-case class GoogleProvider[USER <: UsingID](service: UserService[USER]) extends OAuth2Provider[USER](service) {
+/**
+ * A Google OAuth2 Provider
+ */
+case class GoogleProvider2[In, Out, User <: UsingID](oauth2: OAuth2Service[In,Out], user: UserService[User])
+    extends OAuth2Provider[In,Out,User](user) {
+
+  override val oauth2Service: OAuth2Service[In,Out] = oauth2
+
   val UserInfoApi = "https://www.googleapis.com/oauth2/v1/userinfo?access_token="
   val Error = "error"
   val Message = "message"
@@ -46,15 +46,13 @@ case class GoogleProvider[USER <: UsingID](service: UserService[USER]) extends O
 
   import play.api.Play.current
 
-  def fill(accessToken: String):  Future[Option[OauthUserData]] = {
+  def fill(accessToken: String)(implicit ctx: ExecutionContext):  Future[Option[OauthUserData]] = {
     WS.url(UserInfoApi + accessToken).get().map { response =>
       val me = response.json
       (me \ Error).asOpt[JsObject] match {
         case Some(error) => {
           val message = (error \ Message).asOpt[String]
           val errorType = ( error \ Type).asOpt[String]
-          Logger.error("[reactivesecurity] error retrieving profile information from Google. Error type = %s, message = %s"
-            .format(errorType,message))
           None
         }
         case _ => {
@@ -74,4 +72,3 @@ case class GoogleProvider[USER <: UsingID](service: UserService[USER]) extends O
 object GoogleProvider {
   val Google = "google"
 }
-*/

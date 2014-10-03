@@ -16,8 +16,6 @@
  */
 package reactivesecurity.core
 
-import _root_.java.net.URLEncoder
-import _root_.java.util.UUID
 import play.api.{Logger, Play, Application}
 import play.api.cache.Cache
 import Play.current
@@ -28,7 +26,7 @@ import reactivesecurity.core.Authentication.AuthenticationValidator
 import reactivesecurity.core.Failures._
 import reactivesecurity.core.User.{UserService, UsingID}
 import reactivesecurity.core.util.{OauthAuthenticationHelper, OauthUserData}
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import concurrent.ExecutionContext.Implicits.global
 import scalaz.{Failure, Validation}
 import play.api.libs.ws.WS
@@ -53,16 +51,16 @@ case class OAuth2Info(
 /**
  * Base class for all OAuth2 providers
  */
-abstract class OAuth2Provider[USER <: UsingID](userService: UserService[USER]) extends Provider[USER] {
+abstract class OAuth2ProviderTODODELETE[USER <: UsingID](userService: UserService[USER]) extends Provider[USER] {
 
   def fill(accessToken: String): Future[Option[OauthUserData]]
 
   override def providerId: String
 
-  val maybeSettings = getSettings()
+  val maybeSettings = getSettings
   val secured = play.api.Play.current.configuration.getString("https.port").isDefined
 
-  private def getSettings(): Option[OAuth2Settings] = {
+  private def getSettings: Option[OAuth2Settings] = {
     val result = for {
       authorizationUrl  <- ConfHelper.loadProperty(OAuth2Settings.AuthorizationUrl,providerId)
       accessToken       <- ConfHelper.loadProperty(OAuth2Settings.AccessTokenUrl,providerId)
@@ -97,7 +95,7 @@ abstract class OAuth2Provider[USER <: UsingID](userService: UserService[USER]) e
     }
   }
 
-  override def authenticate(credentials: Request[_]): Future[Validation[AuthenticationFailure,USER]] = {
+  override def authenticate(credentials: Request[_])(implicit ec: ExecutionContext): Future[Validation[AuthenticationFailure,USER]] = {
     credentials.queryString.get(OAuth2Constants.Code).flatMap(_.headOption).map { code =>
       val accessToken: Option[Future[OAuth2Info]] = for {
         settings <- maybeSettings

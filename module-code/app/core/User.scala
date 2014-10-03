@@ -16,9 +16,7 @@ object User {
   }
 
   trait UserService[USER <: UsingID] {
-    def find(id: USER#ID)(implicit ec: ExecutionContext): Future[Option[USER]]
     def findByProvider(provider: String, identifier: String)(implicit ec: ExecutionContext): Future[Option[USER]]
     def oauthAccessToken(id: USER#ID, provider: String, token: OauthAccessToken): Unit
-    //def associateProvider(id: USER#ID, provider: String, identifier: String)(implicit ec: ExecutionContext): Future[Option[USER]]
   }
 }

@@ -14,6 +14,6 @@ object Authentication {
   }
 
   trait AuthenticationValidator[-CREDENTIALS, USER, +FAILURE] {
-    def authenticate(credentials: CREDENTIALS): Future[Validation[FAILURE,USER]]
+    def authenticate(credentials: CREDENTIALS)(implicit ctx: ExecutionContext): Future[Validation[FAILURE,USER]]
   }
 }

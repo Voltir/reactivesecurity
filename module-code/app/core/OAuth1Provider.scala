@@ -30,7 +30,7 @@ import reactivesecurity.core.Failures._
 
 import reactivesecurity.core.User.{UserService, UsingID}
 import reactivesecurity.core.util.{OauthAuthenticationHelper, OauthUserData}
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import concurrent.ExecutionContext.Implicits.global
 import scalaz.Validation
 import play.api.libs.oauth.OAuth
@@ -67,7 +67,7 @@ abstract class OAuth1Provider[USER <: UsingID](userService: UserService[USER]) e
 
   val maybeService: Option[OAuth] =  serviceInfo.map { info => OAuth(info, use10a = true) }
 
-  override def authenticate(credentials: Request[_]): Future[Validation[AuthenticationFailure,USER]] = {
+  override def authenticate(credentials: Request[_])(implicit ec: ExecutionContext): Future[Validation[AuthenticationFailure,USER]] = {
     def fail(errTxt: String): Validation[AuthenticationFailure,USER] = Failure(OauthFailure(errTxt))
     credentials.queryString.get("oauth_verifier").map { seq =>
       val verifier = seq.head

@@ -30,6 +30,8 @@ object Failures {
 
   case object OAuth2NoAccessCode extends AuthenticationFailure
 
+  case class Oauth2ProviderConfigurationError(provider: String) extends AuthenticationFailure
+
   trait AuthorizationFailure
 
   case object NotAuthorized extends AuthorizationFailure
