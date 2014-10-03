@@ -11,12 +11,8 @@ object User {
     val id: ID
   }
 
-  trait UserProvider[+USER] {
-    def user: USER
-  }
-
-  trait UserService[USER <: UsingID] {
-    def findByProvider(provider: String, identifier: String)(implicit ec: ExecutionContext): Future[Option[USER]]
-    def oauthAccessToken(id: USER#ID, provider: String, token: OauthAccessToken): Unit
+  trait UserService[User <: UsingID] {
+    def findByProvider(provider: String, identifier: String)(implicit ec: ExecutionContext): Future[Option[User]]
+    def oauthUpdateAccessToken(id: User#ID, provider: String, token: OauthAccessToken): Unit
   }
 }

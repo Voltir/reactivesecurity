@@ -23,7 +23,7 @@ object OauthAuthenticationHelper {
   def finishAuthenticate[USER <: UsingID](provider: String, userService: UserService[USER], oauth: OauthUserData)(implicit ec: ExecutionContext): Future[Validation[AuthenticationFailure,USER]] = {
     userService.findByProvider(provider,oauth.identifier).map { user =>
       if(user.isDefined)  {
-        userService.oauthAccessToken(user.get.id,provider,oauth.accessToken)
+        userService.oauthUpdateAccessToken(user.get.id,provider,oauth.accessToken)
         Success(user.get)
       }
       else Failure(RequiresNewOauthUser(oauth))
