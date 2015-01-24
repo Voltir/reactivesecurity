@@ -87,7 +87,8 @@ abstract class OAuth2Provider[In,Out,User <: UsingID](userService: UserService[U
     result
   }
 
-  override def authenticate(credentials: In)(implicit ctx: ExecutionContext): Future[Validation[AuthenticationFailure,User]] = {
+  override def authenticate(credentials: In)
+                           (implicit ctx: ExecutionContext): Future[Validation[AuthenticationFailure,User]] = {
     val accessToken = extractAccessToken(credentials)(providerId,maybeSettings.get)
     if(accessToken.isDefined) {
       accessToken.get.flatMap { token =>
@@ -102,7 +103,9 @@ abstract class OAuth2Provider[In,Out,User <: UsingID](userService: UserService[U
     }
   }
 
-  private def extractAccessToken(in: In)(providerId: String, settings: OAuth2Settings)(implicit ctx: ExecutionContext): Option[Future[OAuth2Info]] = {
+  private def extractAccessToken(in: In)
+                                (providerId: String, settings: OAuth2Settings)
+                                (implicit ctx: ExecutionContext): Option[Future[OAuth2Info]] = {
     val accessToken: Option[Future[OAuth2Info]] = for {
       (code,currentState) <- oauth2Service.extract(in)(settings)
       originalState <- oauth2Service.loadSessionState(in)
@@ -113,10 +116,9 @@ abstract class OAuth2Provider[In,Out,User <: UsingID](userService: UserService[U
     accessToken
   }
 
-  private def fetchAccessToken(code: String, settings: OAuth2Settings, callback: String)(implicit ctx: ExecutionContext): Future[OAuth2Info] = {
-
+  private def fetchAccessToken(code: String, settings: OAuth2Settings, callback: String)
+                              (implicit ctx: ExecutionContext): Future[OAuth2Info] = {
     import play.api.Play.current
-
     val params = Map(
       OAuth2Constants.ClientId -> Seq(settings.clientId),
       OAuth2Constants.ClientSecret -> Seq(settings.clientSecret),
@@ -124,9 +126,9 @@ abstract class OAuth2Provider[In,Out,User <: UsingID](userService: UserService[U
       OAuth2Constants.Code -> Seq(code),
       OAuth2Constants.RedirectUri -> Seq(callback)
     )
+
     WS.url(settings.accessTokenUrl).post(params).map { response =>
       val json = response.json
-
       OAuth2Info(
         (json \ OAuth2Constants.AccessToken).as[String],
         (json \ OAuth2Constants.TokenType).asOpt[String],

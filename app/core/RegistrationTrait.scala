@@ -1,10 +1,8 @@
 package core
 
-import core.Password.{PasswordInfo, PasswordService}
 import core.User.{UsingID, UserService}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import org.joda.time.DateTime
 import java.util.UUID
 
