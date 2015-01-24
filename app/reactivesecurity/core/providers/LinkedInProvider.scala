@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  */
-package core.providers
+package reactivesecurity.core.providers
 
 import play.api.libs.ws.WS
 import play.api.Logger
@@ -23,10 +23,10 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.oauth.ServiceInfo
 import play.api.libs.oauth.RequestToken
 import play.api.libs.oauth.OAuthCalculator
-import core.Failures._
-import core._
-import core.User.{UserService, UsingID}
-import core.util.{Oauth1,OauthUserData}
+import reactivesecurity.core.Failures._
+import reactivesecurity.core._
+import reactivesecurity.core.User.{UserService, UsingID}
+import reactivesecurity.core.util.{Oauth1,OauthUserData}
 import LinkedInProvider._
 import scala.concurrent.Future
 

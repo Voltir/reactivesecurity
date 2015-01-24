@@ -1,9 +1,9 @@
-package controllers
+package reactivesecurity.controllers
 
 import play.api.mvc._
 
-import core.Failures.ValidationFailure
-import core.User.UsingID
+import reactivesecurity.core.Failures.ValidationFailure
+import reactivesecurity.core.User.UsingID
 
 import scala.concurrent.{Future, ExecutionContext}
 

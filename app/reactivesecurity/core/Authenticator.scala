@@ -1,10 +1,10 @@
-package core
+package reactivesecurity.core
 
-import core.Password.PasswordService
-import core.User.{UsingID, UserService}
-import core.providers._
-import core.Failures._
-import core.util.OauthUserData
+import reactivesecurity.core.Password.PasswordService
+import reactivesecurity.core.User.{UsingID, UserService}
+import reactivesecurity.core.providers._
+import reactivesecurity.core.Failures._
+import reactivesecurity.core.util.OauthUserData
 
 import scalaz.{Failure,Success}
 import scala.concurrent.{Future, ExecutionContext}

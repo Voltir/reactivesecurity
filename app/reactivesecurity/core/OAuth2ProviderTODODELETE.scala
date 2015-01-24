@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  */
-package core
+package reactivesecurity.core
 
 /**
  * The Oauth2 details

@@ -1,9 +1,9 @@
-package controllers
+package reactivesecurity.controllers
 
 import play.api.mvc.RequestHeader
-import core.{AuthenticationToken, AuthenticatorService}
-import core.User.UsingID
-import core.Failures._
+import reactivesecurity.core.{AuthenticationToken, AuthenticatorService}
+import reactivesecurity.core.User.UsingID
+import reactivesecurity.core.Failures._
 import concurrent.{ExecutionContext, Future}
 import scalaz.{Failure, Validation}
 

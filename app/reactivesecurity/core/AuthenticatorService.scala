@@ -1,6 +1,6 @@
-package core
+package reactivesecurity.core
 
-import core.User.UsingID
+import reactivesecurity.core.User.UsingID
 
 import scala.concurrent.Future
 import scalaz.Validation

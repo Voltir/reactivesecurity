@@ -14,13 +14,13 @@
  * limitations under the License.
  *
  */
-package core.providers
+package reactivesecurity.core.providers
 
 import play.api.libs.ws._
 import play.api.libs.json.JsObject
-import core.User.{UserService, UsingID}
-import core.util.{Oauth2, OauthUserData}
-import core.{OAuth2Service, OAuth2Provider}
+import reactivesecurity.core.User.{UserService, UsingID}
+import reactivesecurity.core.util.{Oauth2, OauthUserData}
+import reactivesecurity.core.{OAuth2Service, OAuth2Provider}
 import scala.concurrent.{ExecutionContext, Future}
 
 /**

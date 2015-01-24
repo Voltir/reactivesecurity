@@ -1,7 +1,7 @@
-package defaults
+package reactivesecurity.defaults
 
-import core.Password._
-import core.User.UsingID
+import reactivesecurity.core.Password._
+import reactivesecurity.core.User.UsingID
 import scala.concurrent.{ExecutionContext, Future}
 
 class InMemoryPasswordService[USER <: UsingID] extends PasswordService[USER] {

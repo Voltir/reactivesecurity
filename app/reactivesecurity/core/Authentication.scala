@@ -1,4 +1,4 @@
-package core
+package reactivesecurity.core
 
 import scalaz.Validation
 import scala.concurrent.{ExecutionContext, Future}

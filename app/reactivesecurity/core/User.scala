@@ -1,4 +1,4 @@
-package core
+package reactivesecurity.core
 
 import scala.concurrent.{ExecutionContext, Future}
 

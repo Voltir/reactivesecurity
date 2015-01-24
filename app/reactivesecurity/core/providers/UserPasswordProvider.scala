@@ -1,10 +1,10 @@
-package core.providers
+package reactivesecurity.core.providers
 
-import core.Password.PasswordService
-import core.Failures._
-import core.Provider2
-import core.Credentials.PasswordHashValidator2
-import core.User.{UserService, UsingID}
+import reactivesecurity.core.Password.PasswordService
+import reactivesecurity.core.Failures._
+import reactivesecurity.core.Provider2
+import reactivesecurity.core.Credentials.PasswordHashValidator2
+import reactivesecurity.core.User.{UserService, UsingID}
 import scalaz.{Failure, Validation}
 import scala.concurrent.{ExecutionContext, Future}
 

@@ -1,9 +1,9 @@
-package core.util
+package reactivesecurity.core.util
 
 import play.Play
 import play.api.mvc.Call
 import play.api.PlayException
-import core.User.UsingID
+import reactivesecurity.core.User.UsingID
 
 object RoutesHelper {
 

@@ -1,6 +1,6 @@
-package core
+package reactivesecurity.core
 
-import core.User.{UsingID, UserService}
+import reactivesecurity.core.User.{UsingID, UserService}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.joda.time.DateTime

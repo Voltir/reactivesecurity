@@ -1,8 +1,8 @@
-package controllers
+package reactivesecurity.controllers
 
-import core.Authentication.{AuthenticationFailureHandler, AuthenticationProcess}
-import core.AuthenticatorService
-import core.User.UsingID
+import reactivesecurity.core.Authentication.{AuthenticationFailureHandler, AuthenticationProcess}
+import reactivesecurity.core.AuthenticatorService
+import reactivesecurity.core.User.UsingID
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz.Validation
 

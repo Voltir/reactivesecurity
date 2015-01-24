@@ -1,8 +1,8 @@
-package core
+package reactivesecurity.core
 
 
-import core.User.UsingID
-import core.util.OauthUserData
+import reactivesecurity.core.User.UsingID
+import reactivesecurity.core.util.OauthUserData
 
 object Failures {
 

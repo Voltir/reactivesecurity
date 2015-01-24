@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  */
-package core
+package reactivesecurity.core
 
 import _root_.java.util.UUID
 import play.api.cache.Cache
@@ -27,10 +27,10 @@ import play.api.libs.oauth.ConsumerKey
 import play.api.libs.oauth.OAuth
 import Play.current
 
-import core.Authentication.AuthenticationValidator
-import core.Failures._
-import core.User.{UserService, UsingID}
-import core.util.{OauthAuthenticationHelper, OauthUserData}
+import reactivesecurity.core.Authentication.AuthenticationValidator
+import reactivesecurity.core.Failures._
+import reactivesecurity.core.User.{UserService, UsingID}
+import reactivesecurity.core.util.{OauthAuthenticationHelper, OauthUserData}
 import scala.concurrent.{ExecutionContext, Future}
 import concurrent.ExecutionContext.Implicits.global
 import scalaz.Validation

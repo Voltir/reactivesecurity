@@ -15,7 +15,7 @@
  *
  */
 
-package core.providers
+package reactivesecurity.core.providers
 
 import play.api.libs.oauth.ServiceInfo
 import play.api.libs.oauth.RequestToken
@@ -23,10 +23,10 @@ import play.api.libs.oauth.OAuthCalculator
 import play.api.libs.ws.WS
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import core._
-import core.User.{UserService, UsingID}
+import reactivesecurity.core._
+import reactivesecurity.core.User.{UserService, UsingID}
 import TwitterProvider._
-import core.util.{Oauth1,OauthUserData}
+import reactivesecurity.core.util.{Oauth1,OauthUserData}
 import scala.concurrent.Future
 
 

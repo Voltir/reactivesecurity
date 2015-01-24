@@ -1,10 +1,10 @@
-package controllers
+package reactivesecurity.controllers
 
 import play.api.mvc._
 import play.api.libs.iteratee.{Iteratee, Enumerator}
 import play.api.mvc.WebSocket.FrameFormatter
-import core.Failures.AuthenticationFailure
-import core.User.UsingID
+import reactivesecurity.core.Failures.AuthenticationFailure
+import reactivesecurity.core.User.UsingID
 import scala.concurrent.{Future, ExecutionContext}
 import scalaz.Success
 

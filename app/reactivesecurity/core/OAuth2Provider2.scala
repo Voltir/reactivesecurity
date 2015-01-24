@@ -16,15 +16,14 @@
  *
  */
 
-package core
+package reactivesecurity.core
 
 import java.net.URLEncoder
 import java.util.UUID
-
 import play.api.libs.ws.WS
-import core.Failures._
-import core.User.{UserService, UsingID}
-import core.util.{OauthAuthenticationHelper, OauthUserData}
+import reactivesecurity.core.Failures._
+import reactivesecurity.core.User.{UserService, UsingID}
+import reactivesecurity.core.util.{OauthAuthenticationHelper, OauthUserData}
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz.{Failure, Validation}
 

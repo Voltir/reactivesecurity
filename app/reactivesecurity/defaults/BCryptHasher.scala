@@ -1,9 +1,9 @@
-package defaults
+package reactivesecurity.defaults
 
 import play.api.Play
 import org.mindrot.jbcrypt.BCrypt
 
-import core.Password._
+import reactivesecurity.core.Password._
 
 object BCryptHasher extends PasswordHasher {
   val roundsConfKey = "reactivesecurity.passwordHasher.bcrypt.rounds"
