@@ -1,13 +1,11 @@
-package reactivesecurity.controllers
-
-import reactivesecurity.core.Authentication
-import reactivesecurity.core.Failures.ValidationFailure
-import scala.concurrent.{Future, ExecutionContext}
+package controllers
 
 import play.api.mvc._
 
-import reactivesecurity.core.User.UsingID
-import core.Authorization.AuthorizationService
+import core.Failures.ValidationFailure
+import core.User.UsingID
+
+import scala.concurrent.{Future, ExecutionContext}
 
 trait AuthorizedAction[USER <: UsingID] extends AuthenticationAction[USER] {
   import ExecutionContext.Implicits.global

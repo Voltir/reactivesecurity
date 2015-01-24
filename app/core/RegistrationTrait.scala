@@ -1,7 +1,7 @@
-package reactivesecurity.core
+package core
 
-import reactivesecurity.core.Password.{PasswordInfo, PasswordService}
-import reactivesecurity.core.User.{UsingID, UserService}
+import core.Password.{PasswordInfo, PasswordService}
+import core.User.{UsingID, UserService}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 

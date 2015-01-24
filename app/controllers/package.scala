@@ -1,7 +1,3 @@
-package reactivesecurity
-
-import play.api.mvc.Result
-
 package object controllers {
 
   import play.api.mvc.{Request, Result}

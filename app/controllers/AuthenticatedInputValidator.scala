@@ -1,18 +1,13 @@
-package reactivesecurity.controllers
+package controllers
 
-import reactivesecurity.core.{AuthenticationToken, AuthenticatorService, Authenticator}
-
-//merge??
-import reactivesecurity.core.User.{UserService, UsingID}
-import reactivesecurity.core.Failures._
-
-import concurrent.{ExecutionContext, Future}
-import scalaz.{Success, Failure, Validation}
 import play.api.mvc.RequestHeader
+import core.{AuthenticationToken, AuthenticatorService}
+import core.User.UsingID
+import core.Failures._
+import concurrent.{ExecutionContext, Future}
+import scalaz.{Failure, Validation}
 
 abstract class AuthenticatedInputValidator[User <: UsingID] extends InputValidator[RequestHeader,User,AuthenticationFailure] {
-  //val users: UserService[USER]
-  //val authenticator: Authenticator[USER]
   val authService: AuthenticatorService[User,AuthenticationFailure]
   def extractAuthenticationToken(req: RequestHeader): Option[AuthenticationToken]
 

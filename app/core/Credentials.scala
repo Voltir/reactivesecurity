@@ -2,10 +2,10 @@ package core
 
 import scalaz.{Failure, Validation, Success}
 
-import reactivesecurity.core.User.UsingID
-import reactivesecurity.core.Password._
-import reactivesecurity.core.providers.EmailPass
-import reactivesecurity.core.Failures._
+import core.User.UsingID
+import core.Password._
+import core.providers.EmailPass
+import core.Failures._
 import scala.concurrent.{ExecutionContext, Future}
 
 object Credentials {

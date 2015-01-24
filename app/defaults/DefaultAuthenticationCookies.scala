@@ -1,8 +1,8 @@
-package reactivesecurity.defaults
+package defaults
 
 import play.api.mvc.Cookie
-import reactivesecurity.core.{CookieParameters, AuthenticatorToken, AuthenticationCookies}
-import reactivesecurity.core.User.UsingID
+import core.{CookieParameters, AuthenticatorToken, AuthenticationCookies}
+import core.User.UsingID
 import java.security.SecureRandom
 import play.api.libs.Codecs._
 

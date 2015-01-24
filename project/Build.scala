@@ -7,7 +7,7 @@ import play.Play.autoImport._
 object ApplicationBuild extends Build {
 
   val appName         = "reactivesecurity"
-  val appVersion      = "1.3.1-SNAPSHOT"
+  val appVersion      = "1.3.2-SNAPSHOT"
 
   val appDependencies = Seq(
     ws,
@@ -17,7 +17,7 @@ object ApplicationBuild extends Build {
   )
 
   val main = Project(appName, file(".")).enablePlugins(play.PlayScala).settings(
-    scalaVersion := "2.11.2",
+    scalaVersion := "2.11.5",
     version := appVersion,
     resolvers ++= Seq(
       "jBCrypt Repository" at "http://repo1.maven.org/maven2/org/",

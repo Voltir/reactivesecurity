@@ -1,12 +1,13 @@
-package reactivesecurity.core
+package core
 
-import reactivesecurity.core.Failures.{AuthenticationServiceFailure, AuthenticationFailure}
-import reactivesecurity.core.User.UsingID
+import core.Failures.{AuthenticationServiceFailure, AuthenticationFailure}
+import core.User.UsingID
 import play.api.mvc._
-import scala.concurrent.{Future, ExecutionContext}
-import scalaz.{Success, Failure, Validation}
 import play.api.mvc.Cookie
 import org.joda.time.DateTime
+import scala.concurrent.{Future, ExecutionContext}
+import scalaz.{Success, Failure, Validation}
+
 
 
 case class AuthenticatorToken[USER <: UsingID](

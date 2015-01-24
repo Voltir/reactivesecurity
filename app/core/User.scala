@@ -1,6 +1,6 @@
-package reactivesecurity.core
+package core
 
-import reactivesecurity.core.util.{OauthAccessToken, OauthUserData}
+import core.util.{OauthAccessToken, OauthUserData}
 import scala.concurrent.{ExecutionContext, Future}
 import play.api.libs.oauth.RequestToken
 

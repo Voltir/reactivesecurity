@@ -14,55 +14,56 @@
  * limitations under the License.
  *
  */
-package reactivesecurity.core.providers
+package core.providers
 
-import reactivesecurity.core.Failures._
-import reactivesecurity.core._
-import reactivesecurity.core.User.{UserService, UsingID}
 import play.api.libs.ws.WS
 import play.api.Logger
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import LinkedInProvider._
-import reactivesecurity.core.util.{Oauth1,OauthUserData}
-import scala.concurrent.Future
 import play.api.libs.oauth.ServiceInfo
 import play.api.libs.oauth.RequestToken
 import play.api.libs.oauth.OAuthCalculator
+import core.Failures._
+import core._
+import core.User.{UserService, UsingID}
+import core.util.{Oauth1,OauthUserData}
+import LinkedInProvider._
+import scala.concurrent.Future
 
-case class LinkedInProvider[USER <: UsingID](service: UserService[USER]) extends OAuth1Provider[USER](service) {
 
-  override def providerId = LinkedInProvider.LinkedIn
-
-  import play.api.Play.current
-
-  def fill(accessToken: RequestToken, serviceInfo: ServiceInfo): Future[Option[OauthUserData]] = {
-    WS.url(LinkedInProvider.Api).sign(OAuthCalculator(serviceInfo.key,accessToken)).get().map { response =>
-      val me = response.json
-      (me \ ErrorCode).asOpt[Int] match {
-        case Some(error) => {
-          val message = (me \ Message).asOpt[String]
-          val requestId = (me \ RequestId).asOpt[String]
-          val timestamp = (me \ Timestamp).asOpt[String]
-          Logger.error(
-            "Error retrieving information from LinkedIn. Error code: %s, requestId: %s, message: %s, timestamp: %s"
-              format(error, message, requestId, timestamp)
-          )
-          None
-        }
-        case _ => {
-          val userId = (me \ Id).as[String]
-          val firstName = (me \ FirstName).asOpt[String].getOrElse("")
-          val lastName = (me \ LastName).asOpt[String].getOrElse("")
-          val fullName = (me \ FormattedName).asOpt[String].getOrElse("")
-          val email = (me \ Email).asOpt[String].getOrElse("")
-          val avatarUrl = (me \ PictureUrl).asOpt[String]
-          Some(OauthUserData(LinkedInProvider.LinkedIn,userId,firstName,lastName,fullName,email,Oauth1(accessToken)))
-        }
-      }
-    }
-  }
-}
+//case class LinkedInProvider[USER <: UsingID](service: UserService[USER]) extends OAuth1Provider[USER](service) {
+//
+//  override def providerId = LinkedInProvider.LinkedIn
+//
+//  import play.api.Play.current
+//
+//  def fill(accessToken: RequestToken, serviceInfo: ServiceInfo): Future[Option[OauthUserData]] = {
+//    WS.url(LinkedInProvider.Api).sign(OAuthCalculator(serviceInfo.key,accessToken)).get().map { response =>
+//      val me = response.json
+//      (me \ ErrorCode).asOpt[Int] match {
+//        case Some(error) => {
+//          val message = (me \ Message).asOpt[String]
+//          val requestId = (me \ RequestId).asOpt[String]
+//          val timestamp = (me \ Timestamp).asOpt[String]
+//          Logger.error(
+//            "Error retrieving information from LinkedIn. Error code: %s, requestId: %s, message: %s, timestamp: %s"
+//              format(error, message, requestId, timestamp)
+//          )
+//          None
+//        }
+//        case _ => {
+//          val userId = (me \ Id).as[String]
+//          val firstName = (me \ FirstName).asOpt[String].getOrElse("")
+//          val lastName = (me \ LastName).asOpt[String].getOrElse("")
+//          val fullName = (me \ FormattedName).asOpt[String].getOrElse("")
+//          val email = (me \ Email).asOpt[String].getOrElse("")
+//          val avatarUrl = (me \ PictureUrl).asOpt[String]
+//          Some(OauthUserData(LinkedInProvider.LinkedIn,userId,firstName,lastName,fullName,email,Oauth1(accessToken)))
+//        }
+//      }
+//    }
+//  }
+//}
 
 object LinkedInProvider {
   val Api = "https://api.linkedin.com/v1/people/~:(id,first-name,last-name,formatted-name,picture-url,email-address)?format=json"

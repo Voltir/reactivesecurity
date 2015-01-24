@@ -1,12 +1,11 @@
-package reactivesecurity.controllers
+package controllers
 
 import play.api.mvc._
-
-import scala.concurrent.{Future, ExecutionContext}
-import reactivesecurity.core.Failures.AuthenticationFailure
-import reactivesecurity.core.User.UsingID
 import play.api.libs.iteratee.{Iteratee, Enumerator}
 import play.api.mvc.WebSocket.FrameFormatter
+import core.Failures.AuthenticationFailure
+import core.User.UsingID
+import scala.concurrent.{Future, ExecutionContext}
 import scalaz.Success
 
 trait AuthenticationAction[USER <: UsingID] extends PlayAuthentication[RequestHeader,Result,USER,AuthenticationFailure] {

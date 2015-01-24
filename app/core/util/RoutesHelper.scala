@@ -3,7 +3,7 @@ package core.util
 import play.Play
 import play.api.mvc.Call
 import play.api.PlayException
-import reactivesecurity.core.User.UsingID
+import core.User.UsingID
 
 object RoutesHelper {
 

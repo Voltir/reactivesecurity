@@ -1,7 +1,7 @@
-package reactivesecurity.core.util
+package core.util
 
-import reactivesecurity.core.Failures.{RequiresNewOauthUser,AuthenticationFailure}
-import reactivesecurity.core.User.{UserService, UsingID}
+import core.Failures.{RequiresNewOauthUser,AuthenticationFailure}
+import core.User.{UserService, UsingID}
 import scala.concurrent._
 import scalaz.{Success, Failure, Validation}
 import play.api.libs.oauth.RequestToken

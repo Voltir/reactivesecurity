@@ -1,38 +1,12 @@
-package reactivesecurity.core.providers
+package core.providers
 
-import reactivesecurity.core.Password.PasswordService
-import reactivesecurity.core.Failures._
-import reactivesecurity.core.Provider2
-import scalaz.{Failure, Validation}
-import reactivesecurity.core.User.{UserService, UsingID}
-import scala.concurrent.{ExecutionContext, Future}
+import core.Password.PasswordService
+import core.Failures._
+import core.Provider2
 import core.Credentials.PasswordHashValidator2
-
-/* TODO DELETE
-case class IdPass(id: String, password: String)
-
-case class UserPassword[USER <: UsingID](users: UserService[USER], passService: PasswordService[USER]) extends Provider[USER] {
-
-  override val providerId = "userpass"
-
-  private val validator = new PasswordHashValidator[USER] { override val passwordService = passService }
-
-  override def authenticate(credentials: Request[_]): Future[Validation[AuthenticationFailure,USER]] = {
-    val fail: Validation[AuthenticationFailure,USER] = Failure(AuthenticationServiceFailure(OauthFailure("Oauth Failed to Authenticate")))
-    LoginForm.loginForm.bindFromRequest()(credentials).fold(
-      errors => Future(fail),
-      { case (email: String, password: String) =>
-        users.findByProvider(providerId,email).flatMap { _.fold {
-          val fail: Validation[AuthenticationFailure,USER] = Failure(AuthenticationServiceFailure(IdentityNotFound(email)))
-          Logger.debug("[reactivesecurity] Userpass Authentication Failed -- Email Not Found: "+email)
-          Future(fail)
-          } { user => validator.validate(user,IdPass(email,password)) }
-        }
-      }
-    )
-  }
-}
-*/
+import core.User.{UserService, UsingID}
+import scalaz.{Failure, Validation}
+import scala.concurrent.{ExecutionContext, Future}
 
 case class EmailPass(email: String, password: String)
 
