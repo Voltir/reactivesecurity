@@ -1,8 +1,0 @@
-@(loginForm: Form[(String,String)])
-
-@main(Messages("login.pagetitle")) {
-<div class="clearfix">
-    <p>@Messages("reactivesecurity.login.useEmailAndPasswordOnly")</p>
-    @provider("userpass", Some(loginForm))
-</div>
-}
