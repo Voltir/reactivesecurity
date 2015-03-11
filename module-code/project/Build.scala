@@ -7,7 +7,7 @@ import play.Play.autoImport._
 object ApplicationBuild extends Build {
 
   val appName         = "reactivesecurity"
-  val appVersion      = "1.3.1-SNAPSHOT"
+  val appVersion      = "1.3.2-SNAPSHOT"
 
   val appDependencies = Seq(
     ws,
