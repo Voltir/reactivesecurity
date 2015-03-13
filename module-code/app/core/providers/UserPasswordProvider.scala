@@ -10,7 +10,7 @@ import core.Credentials.PasswordHashValidator2
 
 case class EmailPass(email: String, password: String)
 
-case class EmailPasswordProvider2[In, User <: UsingID](
+class EmailPasswordProvider2[In, User <: UsingID](
     users: UserService[User],
     passService: PasswordService[User],
     extract: In => EmailPass
@@ -21,11 +21,9 @@ case class EmailPasswordProvider2[In, User <: UsingID](
 
   override def authenticate(input: In)(implicit ec: ExecutionContext): Future[Validation[AuthenticationFailure,User]] = {
     val credentials = extract(input)
-    users.findByProvider(providerId,credentials.email).flatMap { _.fold {
-      val fail: Validation[AuthenticationFailure,User] = Failure(AuthenticationServiceFailure(IdentityNotFound(credentials.email)))
-      Future(fail)
-    } {
-      user => validator.validate(user,credentials)
-    }}
+    users.findByProvider(providerId,credentials.email).flatMap {
+      case Some(user) => validator.validate(user,credentials)
+      case _ => Future(Failure(IdentityNotFound[User](credentials.email)))
+    }
   }
 }

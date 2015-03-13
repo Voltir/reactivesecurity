@@ -18,7 +18,5 @@ object Password {
     val hasher: PasswordHasher
 
     def find(id: USER#ID)(implicit ec: ExecutionContext): Future[Option[PasswordInfo]]
-
-    def save(id: USER#ID, pass: PasswordInfo)(implicit ec: ExecutionContext): Future[Boolean]
   }
 }

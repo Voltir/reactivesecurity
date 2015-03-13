@@ -15,9 +15,4 @@ class InMemoryPasswordService[USER <: UsingID] extends PasswordService[USER] {
     val password = passwords.get(id)
     Future(password)
   }
-
-  override def save(id: USER#ID, pass: PasswordInfo)(implicit ec: ExecutionContext): Future[Boolean] = {
-    passwords += (id -> pass)
-    Future(true)
-  }
 }

@@ -12,7 +12,6 @@ trait AuthenticationAction[USER <: UsingID] extends PlayAuthentication[RequestHe
 
   implicit val ec: ExecutionContext
 
-
   case class AuthenticatedRequest[A](user: USER, request: Request[A]) extends WrappedRequest[A](request)
 
   case class MaybeAuthenticatedRequest[A](maybeUser: Option[USER], request: Request[A]) extends WrappedRequest[A](request)

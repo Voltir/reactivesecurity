@@ -7,7 +7,6 @@ import scala.concurrent.{Future, ExecutionContext}
 import play.api.mvc._
 
 import reactivesecurity.core.User.UsingID
-import core.Authorization.AuthorizationService
 
 trait AuthorizedAction[USER <: UsingID] extends AuthenticationAction[USER] {
   import ExecutionContext.Implicits.global

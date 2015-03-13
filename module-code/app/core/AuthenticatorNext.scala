@@ -23,10 +23,10 @@ trait AuthenticatorNext[In,Failure,Out,User <: UsingID] {
   def onUnknownProvider: Future[Out]
 
   lazy val providers: Map[String,Provider2[In,User]] = Map(
-    "emailpass" -> EmailPasswordProvider2(userService,passService,emailPassExtract),
+    "emailpass" -> new EmailPasswordProvider2(userService,passService,emailPassExtract),
     //"linkedin" -> LinkedInProvider[User](userService),
     //"twitter" -> TwitterProvider[User](userService),
-    "google" -> GoogleProvider2[In,Out,User](oauth2Service,userService)
+    "google" -> new GoogleProvider2[In,Out,User](oauth2Service,userService)
   )
 
   //def authenticate(in: In, provider: String)(success: User => AuthenticationToken => Future[Out]): Future[Out] = providers.get(provider).map {

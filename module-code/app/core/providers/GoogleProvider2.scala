@@ -26,7 +26,7 @@ import scala.concurrent.{ExecutionContext, Future}
 /**
  * A Google OAuth2 Provider
  */
-case class GoogleProvider2[In, Out, User <: UsingID](oauth2: OAuth2Service[In,Out], user: UserService[User])
+class GoogleProvider2[In, Out, User <: UsingID](oauth2: OAuth2Service[In,Out], user: UserService[User])
     extends OAuth2Provider[In,Out,User](user) {
 
   override val oauth2Service: OAuth2Service[In,Out] = oauth2
