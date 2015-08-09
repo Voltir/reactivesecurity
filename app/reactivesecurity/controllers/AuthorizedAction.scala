@@ -4,7 +4,6 @@ import play.api.mvc._
 
 import reactivesecurity.core.Failures.ValidationFailure
 import reactivesecurity.core.User.UsingID
-
 import scala.concurrent.{Future, ExecutionContext}
 
 trait AuthorizedAction[USER <: UsingID] extends AuthenticationAction[USER] {

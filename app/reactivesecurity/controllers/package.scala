@@ -1,9 +1,9 @@
+package reactivesecurity
+
 package object controllers {
 
   import play.api.mvc.{Request, Result}
   import play.api.http.HeaderNames
-
-  import scalaz.Scalaz._
 
   def withRefererAsOriginalUrl[A](result: Result)(implicit request: Request[A]): Result = {
     val origUrl = "original-url"
@@ -17,9 +17,8 @@ package object controllers {
         // back to http and loose our session. So let's get the path and query string only
           val idxFirstSlash = referer.indexOf("/", "https://".length())
           val refererUri = if (idxFirstSlash < 0) "/" else referer.substring(idxFirstSlash)
-          result.withSession(
-            request.session + (origUrl -> refererUri))
-        } | result
+          result.withSession(request.session + (origUrl -> refererUri))
+        }.getOrElse(result)
       }
     }
   }
