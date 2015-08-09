@@ -4,16 +4,16 @@ import play.api.mvc._
 import play.api.libs.iteratee.{Iteratee, Enumerator}
 import play.api.mvc.WebSocket.FrameFormatter
 import reactivesecurity.core.Failures.AuthenticationFailure
-import reactivesecurity.core.User.UsingID
+import reactivesecurity.core.service.HasID
 import scala.concurrent.{Future, ExecutionContext}
 
-trait AuthenticationAction[USER <: UsingID] extends PlayAuthentication[RequestHeader,Result,USER,AuthenticationFailure] {
+trait AuthenticationAction[User <: HasID] extends PlayAuthentication[RequestHeader,Result,User,AuthenticationFailure] {
 
   implicit val ec: ExecutionContext
 
-  case class AuthenticatedRequest[A](user: USER, request: Request[A]) extends WrappedRequest[A](request)
+  case class AuthenticatedRequest[A](user: User, request: Request[A]) extends WrappedRequest[A](request)
 
-  case class MaybeAuthenticatedRequest[A](maybeUser: Option[USER], request: Request[A]) extends WrappedRequest[A](request)
+  case class MaybeAuthenticatedRequest[A](maybeUser: Option[User], request: Request[A]) extends WrappedRequest[A](request)
 
   case class Authenticated[A](action: Action[A]) extends Action[A] {
     def apply(request: Request[A]): Future[Result] = {
@@ -29,7 +29,7 @@ trait AuthenticationAction[USER <: UsingID] extends PlayAuthentication[RequestHe
     override def composeAction[A](action: Action[A]) = new Authenticated(action)
   }
 
-  def AuthenticatedWS[A](f: RequestHeader => USER => Future[(Iteratee[A, _], Enumerator[A])])(
+  def AuthenticatedWS[A](f: RequestHeader => User => Future[(Iteratee[A, _], Enumerator[A])])(
     implicit frameFormatter: FrameFormatter[A]): WebSocket[A, A] = WebSocket.tryAccept[A] {
     request => validate(request).flatMap { result =>
       result.fold(

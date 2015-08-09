@@ -3,17 +3,14 @@ package reactivesecurity.controllers
 import play.api.mvc._
 
 import reactivesecurity.core.Failures.ValidationFailure
-import reactivesecurity.core.User.UsingID
+import reactivesecurity.core.service.HasID
 import scala.concurrent.{Future, ExecutionContext}
 
-trait AuthorizedAction[USER <: UsingID] extends AuthenticationAction[USER] {
-  import ExecutionContext.Implicits.global
+trait AuthorizedAction[User <: HasID] extends AuthenticationAction[User] {
+  class AuthorizedRequest[A](user: User, request: Request[A]) extends AuthenticatedRequest[A](user,request)
 
-  class AuthorizedRequest[A](user: USER, request: Request[A]) extends AuthenticatedRequest[A](user,request)
-
-  class AuthorizedActionBuilder(authorized: USER => Future[Boolean]) extends ActionBuilder[AuthorizedRequest] {
+  class AuthorizedActionBuilder(authorized: User => Future[Boolean]) extends ActionBuilder[AuthorizedRequest] {
     override def invokeBlock[A](request: Request[A], block: AuthorizedRequest[A] => Future[Result]) = {
-      val ec = implicitly[ExecutionContext]
       Authenticated.invokeBlock[A](request, { authenticated =>
         authorized(authenticated.user).flatMap { authorized =>
           if(authorized) block(new AuthorizedRequest[A](authenticated.user,request))
@@ -24,7 +21,7 @@ trait AuthorizedAction[USER <: UsingID] extends AuthenticationAction[USER] {
   }
 
   object Authorized {
-    def apply[A](authorized: USER => Future[Boolean]) = {
+    def apply[A](authorized: User => Future[Boolean]) = {
       new AuthorizedActionBuilder(authorized)
     }
   }

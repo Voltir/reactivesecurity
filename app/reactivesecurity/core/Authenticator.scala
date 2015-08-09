@@ -1,18 +1,20 @@
 package reactivesecurity.core
 
+import com.softwaremill.macwire.MacwireMacros._
+
 import reactivesecurity.core.Password.PasswordService
-import reactivesecurity.core.User.{UsingID, UserService}
 import reactivesecurity.core.providers._
 import reactivesecurity.core.Failures._
+import reactivesecurity.core.service._
 import reactivesecurity.core.util.OauthUserData
 
 import scalaz.{Failure,Success}
 import scala.concurrent.{Future, ExecutionContext}
 import ExecutionContext.Implicits.global
 
-trait Authenticator[In,Failure,Out,User <: UsingID] {
+trait Authenticator[In,Failure,Out,User <: HasID] {
 
-  val userService: UserService[User]
+  def userService: UserService[User]
   val passService: PasswordService[User]
   val oauth2Service: OAuth2Service[In,Out]
 

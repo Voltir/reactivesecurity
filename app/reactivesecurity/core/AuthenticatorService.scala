@@ -1,7 +1,6 @@
 package reactivesecurity.core
 
 //import reactivesecurity.core.Failures.AuthenticationFailure
-import reactivesecurity.core.User.UsingID
 
 //import scala.concurrent.Future
 //import scalaz.Validation

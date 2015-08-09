@@ -29,7 +29,6 @@ import Play.current
 
 import reactivesecurity.core.Authentication.AuthenticationValidator
 import reactivesecurity.core.Failures._
-import reactivesecurity.core.User.{UserService, UsingID}
 import reactivesecurity.core.util.{OauthAuthenticationHelper, OauthUserData}
 import scala.concurrent.{ExecutionContext, Future}
 import concurrent.ExecutionContext.Implicits.global

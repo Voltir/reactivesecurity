@@ -1,8 +1,8 @@
 package reactivesecurity.core
 
-import scalaz.{Failure, Validation, Success}
+import reactivesecurity.core.service.HasID
 
-import reactivesecurity.core.User.UsingID
+import scalaz.{Failure, Validation, Success}
 import reactivesecurity.core.Password._
 import reactivesecurity.core.providers.EmailPass
 import reactivesecurity.core.Failures._
@@ -10,14 +10,14 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object Credentials {
 
-  trait CredentialValidator[USER <: UsingID, CRED] {
-    def validate(user: USER, credential: CRED)(implicit ec: ExecutionContext): Future[Validation[AuthenticationFailure,USER]]
+  trait CredentialValidator[User <: HasID, CRED] {
+    def validate(user: User, credential: CRED)(implicit ec: ExecutionContext): Future[Validation[AuthenticationFailure,User]]
   }
 
-  trait PasswordHashValidator2[USER <: UsingID] extends CredentialValidator[USER,EmailPass] {
-    val passwordService: PasswordService[USER]
+  trait PasswordHashValidator2[User <: HasID] extends CredentialValidator[User,EmailPass] {
+    def passwordService: PasswordService[User]
 
-    override def validate(user: USER, credential: EmailPass)(implicit ec: ExecutionContext): Future[Validation[AuthenticationFailure, USER]] = {
+    override def validate(user: User, credential: EmailPass)(implicit ec: ExecutionContext): Future[Validation[AuthenticationFailure, User]] = {
       passwordService.find(user.id).map {
         case Some(pass) if passwordService.hasher.matches(pass, credential.password) => Success(user)
         case Some(_) => Failure(InvalidPassword)

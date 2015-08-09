@@ -25,7 +25,6 @@ import play.api.libs.oauth.RequestToken
 import play.api.libs.oauth.OAuthCalculator
 import reactivesecurity.core.Failures._
 import reactivesecurity.core._
-import reactivesecurity.core.User.{UserService, UsingID}
 import reactivesecurity.core.util.{Oauth1,OauthUserData}
 import LinkedInProvider._
 import scala.concurrent.Future

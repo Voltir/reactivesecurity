@@ -22,7 +22,7 @@ import java.net.URLEncoder
 import java.util.UUID
 import play.api.libs.ws.WS
 import reactivesecurity.core.Failures._
-import reactivesecurity.core.User.{UserService, UsingID}
+import reactivesecurity.core.service.{HasID, UserService}
 import reactivesecurity.core.util.{OauthAuthenticationHelper, OauthUserData}
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz.{Failure, Validation}
@@ -62,7 +62,7 @@ trait OAuth2Service[In,Out] {
 /**
  * Base class for all OAuth2 providers
  */
-abstract class OAuth2Provider[In,Out,User <: UsingID](userService: UserService[User])
+abstract class OAuth2Provider[In,Out,User <: HasID](userService: UserService[User])
     extends Provider2[In,User] {
 
   val oauth2Service: OAuth2Service[In,Out]

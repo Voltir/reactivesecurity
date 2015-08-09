@@ -18,7 +18,7 @@ package reactivesecurity.core.providers
 
 import play.api.libs.ws._
 import play.api.libs.json.JsObject
-import reactivesecurity.core.User.{UserService, UsingID}
+import reactivesecurity.core.service.{HasID, UserService}
 import reactivesecurity.core.util.{Oauth2, OauthUserData}
 import reactivesecurity.core.{OAuth2Service, OAuth2Provider}
 import scala.concurrent.{ExecutionContext, Future}
@@ -26,7 +26,7 @@ import scala.concurrent.{ExecutionContext, Future}
 /**
  * A Google OAuth2 Provider
  */
-class GoogleProvider2[In, Out, User <: UsingID](oauth2: OAuth2Service[In,Out], user: UserService[User])
+class GoogleProvider2[In, Out, User <: HasID](oauth2: OAuth2Service[In,Out], user: UserService[User])
     extends OAuth2Provider[In,Out,User](user) {
 
   override val oauth2Service: OAuth2Service[In,Out] = oauth2

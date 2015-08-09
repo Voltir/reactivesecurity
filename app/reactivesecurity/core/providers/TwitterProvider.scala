@@ -24,7 +24,6 @@ import play.api.libs.ws.WS
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivesecurity.core._
-import reactivesecurity.core.User.{UserService, UsingID}
 import TwitterProvider._
 import reactivesecurity.core.util.{Oauth1,OauthUserData}
 import scala.concurrent.Future

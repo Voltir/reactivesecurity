@@ -1,6 +1,9 @@
 package reactivesecurity.core
 
-import reactivesecurity.core.User.UsingID
+import com.softwaremill.macwire.MacwireMacros._
+
+import reactivesecurity.core.service.HasID
+
 import scala.concurrent.{Future, ExecutionContext}
 
 object Password {
@@ -8,15 +11,12 @@ object Password {
 
   trait PasswordHasher {
     def id: String
-
     def hash(plainPassword: String): PasswordInfo
-
     def matches(passwordInfo: PasswordInfo, supplied: String): Boolean
   }
 
-  trait PasswordService[USER <: UsingID] {
-    val hasher: PasswordHasher
-
-    def find(id: USER#ID)(implicit ec: ExecutionContext): Future[Option[PasswordInfo]]
+  trait PasswordService[User <: HasID] {
+    def hasher: PasswordHasher
+    def find(id: User#ID)(implicit ec: ExecutionContext): Future[Option[PasswordInfo]]
   }
 }

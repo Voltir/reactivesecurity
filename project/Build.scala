@@ -13,6 +13,8 @@ object ApplicationBuild extends Build {
     ws,
     cache,
     "org.scalaz" %% "scalaz-core" % "7.1.0",
+    "com.softwaremill.macwire" %% "macros" % "1.0.5",
+    "com.softwaremill.macwire" %% "runtime" % "1.0.5",
     "org.mindrot" % "jbcrypt" % "0.3m"
   )
 
