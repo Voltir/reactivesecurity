@@ -9,7 +9,7 @@ import scala.concurrent.{Future, ExecutionContext}
 
 trait AuthenticationAction[User <: HasID] extends PlayAuthentication[RequestHeader,Result,User,AuthenticationFailure] {
 
-  implicit val ec: ExecutionContext
+  def ec: ExecutionContext
 
   case class AuthenticatedRequest[A](user: User, request: Request[A]) extends WrappedRequest[A](request)
 
@@ -17,14 +17,14 @@ trait AuthenticationAction[User <: HasID] extends PlayAuthentication[RequestHead
 
   case class Authenticated[A](action: Action[A]) extends Action[A] {
     def apply(request: Request[A]): Future[Result] = {
-      authentication(user => action(new AuthenticatedRequest[A](user,request)))(ec)(request)
+      authentication(user => action(new AuthenticatedRequest[A](user,request)))(request)
     }
     lazy val parser = action.parser
   }
 
   object Authenticated extends ActionBuilder[AuthenticatedRequest] {
     override def invokeBlock[A](request: Request[A], block: (AuthenticatedRequest[A]) => Future[Result]) = {
-      authentication(user => block(AuthenticatedRequest[A](user,request)))(ec)(request)
+      authentication(user => block(AuthenticatedRequest[A](user,request)))(request)
     }
     override def composeAction[A](action: Action[A]) = new Authenticated(action)
   }
@@ -33,10 +33,10 @@ trait AuthenticationAction[User <: HasID] extends PlayAuthentication[RequestHead
     implicit frameFormatter: FrameFormatter[A]): WebSocket[A, A] = WebSocket.tryAccept[A] {
     request => validate(request).flatMap { result =>
       result.fold(
-        fail => Future(Left(play.api.mvc.Results.Unauthorized)),
-        user => f(request)(user).map(s => Right(s))
+        fail => Future.successful(Left(play.api.mvc.Results.Unauthorized)),
+        user => f(request)(user).map(s => Right(s))(ec)
       )
-    }
+    }(ec)
   }
 
   object MaybeAuthenticated extends ActionBuilder[MaybeAuthenticatedRequest] {
@@ -44,7 +44,7 @@ trait AuthenticationAction[User <: HasID] extends PlayAuthentication[RequestHead
       validate(request).flatMap {
         case scala.util.Right(user) => block(MaybeAuthenticatedRequest(Some(user),request))
         case _ => block(MaybeAuthenticatedRequest(None,request))
-      }
+      }(ec)
     }
   }
 
