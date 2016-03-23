@@ -22,10 +22,9 @@ import java.net.URLEncoder
 import java.util.UUID
 import play.api.libs.ws.WS
 import reactivesecurity.core.Failures._
-import reactivesecurity.core.service.{HasID, UserService}
+import reactivesecurity.core.service.{Identifiable, UserService}
 import reactivesecurity.core.util.{OauthAuthenticationHelper, OauthUserData}
 import scala.concurrent.{ExecutionContext, Future}
-import scalaz.{Failure, Validation}
 
 trait OAuth2Service[In,Out] {
 
@@ -62,7 +61,7 @@ trait OAuth2Service[In,Out] {
 /**
  * Base class for all OAuth2 providers
  */
-abstract class OAuth2Provider[In,Out,User <: HasID](userService: UserService[User])
+abstract class OAuth2Provider[In,Out,User](userService: UserService[User])
     extends Provider2[In,User] {
 
   val oauth2Service: OAuth2Service[In,Out]
@@ -87,18 +86,18 @@ abstract class OAuth2Provider[In,Out,User <: HasID](userService: UserService[Use
   }
 
   override def authenticate(credentials: In)
-                           (implicit ctx: ExecutionContext): Future[Validation[AuthenticationFailure,User]] = {
+                           (implicit ctx: ExecutionContext, id: Identifiable[User]): Future[Either[AuthenticationFailure,User]] = {
     val accessToken = extractAccessToken(credentials)(providerId,maybeSettings.get)
     if(accessToken.isDefined) {
       accessToken.get.flatMap { token =>
         val oauth = fill(token.accessToken)
         oauth.flatMap { o =>
           if (o.isDefined) OauthAuthenticationHelper.finishAuthenticate(providerId, userService, o.get)
-          else Future(Failure(OauthFailure("Could not retrieve oauth data")))
+          else Future(Left(OauthFailure("Could not retrieve oauth data")))
         }
       }
     } else {
-      Future(Failure(OAuth2NoAccessCode))
+      Future(Left(OAuth2NoAccessCode))
     }
   }
 

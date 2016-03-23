@@ -1,9 +1,8 @@
 package reactivesecurity.core.util
 
 import reactivesecurity.core.Failures.{RequiresNewOauthUser,AuthenticationFailure}
-import reactivesecurity.core.service.{UserService, HasID}
+import reactivesecurity.core.service.UserService
 import scala.concurrent._
-import scalaz.{Success, Failure, Validation}
 import play.api.libs.oauth.RequestToken
 
 sealed trait OauthAccessToken
@@ -20,13 +19,11 @@ case class OauthUserData(
   accessToken: OauthAccessToken)
 
 object OauthAuthenticationHelper {
-  def finishAuthenticate[User <: HasID](provider: String, userService: UserService[User], oauth: OauthUserData)(implicit ec: ExecutionContext): Future[Validation[AuthenticationFailure,User]] = {
+  def finishAuthenticate[User](provider: String, userService: UserService[User], oauth: OauthUserData)
+                              (implicit ec: ExecutionContext): Future[Either[AuthenticationFailure,User]] = {
     userService.findByProvider(provider,oauth.identifier).map { user =>
-      if(user.isDefined)  {
-        //userService.oauthUpdateAccessToken(user.get.id,provider,oauth.accessToken)
-        Success(user.get)
-      }
-      else Failure(RequiresNewOauthUser(oauth))
+      if(user.isDefined)  Right(user.get)
+      else Left(RequiresNewOauthUser(oauth))
     }
   }
 }

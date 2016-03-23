@@ -1,7 +1,6 @@
 package reactivesecurity.core
 
 
-import reactivesecurity.core.service.HasID
 import reactivesecurity.core.util.OauthUserData
 
 object Failures {
@@ -12,7 +11,7 @@ object Failures {
 
   case class AuthenticationServiceFailure[A](underlyingError: A) extends AuthenticationFailure
 
-  case class IdentityNotFound[User <: HasID](info: String) extends UserServiceFailure
+  case class IdentityNotFound[User](info: String) extends UserServiceFailure
 
   case object ValidationFailure extends UserServiceFailure
 

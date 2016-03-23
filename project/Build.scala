@@ -7,7 +7,7 @@ import play.Play.autoImport._
 object ApplicationBuild extends Build {
 
   val appName         = "reactivesecurity"
-  val appVersion      = "1.4.0-SNAPSHOT"
+  val appVersion      = "1.4.1-SNAPSHOT"
 
   val appDependencies = Seq(
     ws,
@@ -18,7 +18,7 @@ object ApplicationBuild extends Build {
     "org.mindrot" % "jbcrypt" % "0.3m"
   )
 
-  val main = Project(appName, file(".")).enablePlugins(play.PlayScala).settings(
+  val main = Project(appName, file(".")).enablePlugins(play.sbt.Play).settings(
     scalaVersion := "2.11.7",
     version := appVersion,
     resolvers ++= Seq(

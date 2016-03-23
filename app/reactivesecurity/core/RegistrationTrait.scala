@@ -1,6 +1,6 @@
 package reactivesecurity.core
 
-import reactivesecurity.core.service.{UserService, HasID}
+import reactivesecurity.core.service.UserService
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -16,7 +16,7 @@ case class RegistrationToken(uuid: String, email: String, creationTime: DateTime
   def isExpired = expirationTime.isBeforeNow
 }
 
-trait RegistrationTrait[User <: HasID] {
+trait RegistrationTrait[User] {
   def userService: UserService[User]
 
   val TOKEN_DURATION = 48

@@ -1,20 +1,23 @@
 package reactivesecurity.core
 
-import scalaz.Validation
+import reactivesecurity.core.service.Identifiable
 import scala.concurrent.{ExecutionContext, Future}
 
 object Authentication {
 
-  trait AuthenticationProcess[IN,OUT,+USER] {
-    def ec: ExecutionContext
-    def authentication[A <: IN](block: USER => Future[OUT]): A => Future[OUT]
+  trait AuthenticationProcess[Input,Output,+User] {
+    def authentication[A <: Input](block: User => Future[Output])
+                                  (implicit ctx: ExecutionContext): A => Future[Output]
   }
 
-  trait AuthenticationFailureHandler[-IN,-FAIL,+OUT] {
-    def onAuthenticationFailure(in: IN)(failure: FAIL): Future[OUT]
+  trait AuthenticationFailureHandler[-Input,-Failure,+Output] {
+    def onAuthenticationFailure(in: Input)
+                               (failure: Failure)
+                               (implicit ctx: ExecutionContext): Future[Output]
   }
 
-  trait AuthenticationValidator[-CREDENTIALS, USER, +FAILURE] {
-    def authenticate(credentials: CREDENTIALS)(implicit ctx: ExecutionContext): Future[Validation[FAILURE,USER]]
+  trait AuthenticationValidator[-Credentials, User, +Failure] {
+    def authenticate(credentials: Credentials)
+                    (implicit ctx: ExecutionContext, id: Identifiable[User]): Future[Either[Failure,User]]
   }
 }

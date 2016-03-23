@@ -1,17 +1,19 @@
 package reactivesecurity.defaults
 
 import reactivesecurity.core.Password._
-import reactivesecurity.core.service.HasID
+import reactivesecurity.core.service.Identifiable
 import scala.concurrent.{ExecutionContext, Future}
 
-class InMemoryPasswordService[User <: HasID] extends PasswordService[User] {
-  private val passwords: scala.collection.concurrent.Map[User#ID,PasswordInfo] =
-    new scala.collection.concurrent.TrieMap[User#ID,PasswordInfo]()
+class InMemoryPasswordService[User: Identifiable] extends PasswordService[Identifiable[User]#ID] {
+  type ID = Identifiable[User]#ID
+  private implicit val id = implicitly[Identifiable[User]]
+
+  private val passwords: scala.collection.concurrent.Map[ID,PasswordInfo] =
+    new scala.collection.concurrent.TrieMap[ID,PasswordInfo]()
 
   override val hasher: PasswordHasher = BCryptHasher
 
-  override def find(id: User#ID)(implicit ec: ExecutionContext): Future[Option[PasswordInfo]] = {
-    val password = passwords.get(id)
-    Future(password)
+  override def find(id: ID)(implicit ec: ExecutionContext): Future[Option[PasswordInfo]] = {
+    Future.successful(passwords.get(id))
   }
 }
